@@ -38,7 +38,7 @@ async def get_async_transaction_conn() -> AsyncGenerator[
             return {"user": user}
         ```
 
-    """
+    """  # noqa: E501
     # Get async connection
     async with engine_async.connect() as connection:  # noqa: SIM117
         # Begin transaction
