@@ -21,17 +21,6 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-# i want to add new enum value
-# user_roles_enum:
-#     "binsho_admin",
-#     "cli_admin_hq",
-#     "cli_regional",
-#     "cli_mill_manager",
-#     "cli_grader",
-#     "cli_supplier",
-#     "sys_worker",
-
-
 def upgrade() -> None:
     """Upgrade schema."""
     # Create roles table first
@@ -117,7 +106,7 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        "mills",
+        "services",
         sa.Column("uuid", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("location", sa.String(), nullable=True),
@@ -149,17 +138,21 @@ def upgrade() -> None:
         sa.Column("created_by", sa.String(), nullable=True),
         sa.Column("updated_by", sa.String(), nullable=True),
         sa.Column("deleted_by", sa.String(), nullable=True),
-        sa.PrimaryKeyConstraint("id"),
-        sa.Index("ix_mill_name", "name"),
+        sa.PrimaryKeyConstraint("uuid"),
+        sa.Index("ix_service_name", "name"),
     )
 
     # Create a junction table to establish many-to-many relationship between
-    # users and mills
+    # users and services
     op.create_table(
-        "user_mills",
+        "user_services",
         sa.Column("id", sa.Integer(), nullable=False, autoincrement=True),
         sa.Column("user_uuid", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("mill_uuid", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column(
+            "service_uuid",
+            postgresql.UUID(as_uuid=True),
+            nullable=False,
+        ),
         sa.Column(
             "created_at",
             type_=sa.TIMESTAMP(timezone=True),
@@ -169,23 +162,27 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["user_uuid"],
             ["users.uuid"],
-            name="fk_user_mills_user_uuid",
+            name="fk_user_services_user_uuid",
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
-            ["mill_id"],
-            ["mills.id"],
-            name="fk_user_mills_mill_id",
+            ["service_uuid"],
+            ["services.uuid"],
+            name="fk_user_services_service_uuid",
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("user_uuid", "mill_id", name="uq_user_mill"),
+        sa.UniqueConstraint(
+            "user_uuid",
+            "service_uuid",
+            name="uq_user_service",
+        ),
     )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_table("user_mills")
-    op.drop_table("mills")
+    op.drop_table("user_services")
+    op.drop_table("services")
     op.drop_table("users")
     op.drop_table("roles")

@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: auth-service:latest
+    ports:
+      - "8123:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/auth_db
+      - PYTHONPATH=/code/app
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - auth-network
+
+  db:
+    image: postgres:17.4
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=auth_db
+    ports:
+      - "8124:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - auth-network
+
+networks:
+  auth-network:
+    driver: bridge
+
+volumes:
+  auth_postgres_data:
