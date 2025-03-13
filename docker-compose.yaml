@@ -14,7 +14,7 @@ services:
       - PYTHONPATH=/code/app
     # command: sleep infinity
     # comment this because use .devcontainer for dev
-    command: ["/code/.venv/bin/uvicorn", "app.main:app", "--host",  "0.0.0.0", "--port", "8000", "--reload-dir", "/code/app"]
+    command: ["/code/.venv/bin/uvicorn", "app.main:app", "--host",  "0.0.0.0", "--port", "8000", "--reload"]
     volumes:
       - ./app:/code/app
     restart: unless-stopped
@@ -42,6 +42,22 @@ services:
     restart: unless-stopped
     networks:
       - auth-network
+
+  redis:
+    container_name: ags-redis
+    image: redis/redis-stack:7.2.0-v11
+    ports:
+      - "18002:6379" # api
+      - "18003:8001" # dashboard
+    networks:
+      - auth-network
+    restart: unless-stopped
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      test: ["CMD-SHELL", "redis-cli -h localhost -p 6379 ping"]
+
 
 networks:
   auth-network:

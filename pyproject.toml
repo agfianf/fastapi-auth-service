@@ -13,7 +13,7 @@ dependencies = [
     "sqlalchemy==2.0.39",
     "uvicorn==0.34.0",
     "qrcode==8.0",
-    "psycopg[binary,pool]==3.2.5",
+    "psycopg[binary,pool]==3.2.6",
     "alembic==1.15.1",
     "argon2-cffi==23.1.0",
     "mypy>=1.15.0",
@@ -22,6 +22,7 @@ dependencies = [
     "python-jose>=3.4.0",
     "structlog>=25.2.0",
     "passlib>=1.7.4",
+    "redis>=5.2.1",
 ]
 
 [dependency-groups]
