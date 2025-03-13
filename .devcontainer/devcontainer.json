@@ -1,9 +1,17 @@
+// STILL FAILED. UNDER DEVELOPMENT
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
     "name": "PythonFastAPITemplate",
     // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-    "image": "mcr.microsoft.com/devcontainers/python:3.12",
+    // "image": "mcr.microsoft.com/devcontainers/python:3.12",
+    "dockerComposeFile": "../docker-compose.yaml",
+    "service": "app",
+    "workspaceFolder": "/code/app",
+    "mounts": [
+      "source=${localWorkspaceFolder},target=/code,type=bind,consistency=cached",
+      "source=${env:HOME}/.ssh,target=/home/agfian/.ssh,type=bind,consistency=cached"   
+    ],
     // Features to add to the dev container. More info: https://containers.dev/features.
     "features": {
       "ghcr.io/rocker-org/devcontainer-features/apt-packages:latest": {
@@ -12,9 +20,9 @@
       "ghcr.io/devcontainers/features/git:latest": {},
       "ghcr.io/jungaretti/features/vim:latest": {},
       "ghcr.io/devcontainers/features/common-utils:latest": {
-        "username": "vscode",
-        "uid": 1000,
-        "gid": 1000,
+        "username": "agfian",
+        "uid": 502,
+        "gid": 20,
         "installZsh": true,
         "installOhMyZsh": true,
         "configureZshAsDefaultShell": true,
@@ -26,11 +34,15 @@
       8123
     ],
     // Use 'postCreateCommand' to run commands after the container is created.
-    "postCreateCommand": ".devcontainer/setup.sh",
+    "postCreateCommand": "/code/.devcontainer/setup.sh",
     // Configure tool-specific properties.
     "customizations": {
       "vscode": {
         "settings": {
+          "python.defaultInterpreterPath": "/code/.venv/bin/python",
+          "python.linting.enabled": true,
+          "python.linting.ruffEnabled": true,
+          "ruff.interpreter": ["/code/.venv/bin/python"],
           "workbench": {
             "iconTheme": "vscode-icons"
           },
