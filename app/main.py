@@ -9,12 +9,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from src.config import settings
+from src.repositories.auth import AuthAsyncRepositories
+from src.routers.auth import router as auth_router
+from src.services.auth import AuthService
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa
     print("Initializing resources...")
-    yield
+    auth_service = AuthService(
+        repo_auth=AuthAsyncRepositories,
+    )
+    yield {
+        "auth_service": auth_service,
+    }
     print("Cleaning up resources...")
 
 
@@ -36,3 +44,6 @@ app.add_middleware(
 @app.get("/", include_in_schema=False)
 async def root():  # noqa: ANN201
     return RedirectResponse("/docs")
+
+
+app.include_router(auth_router)
