@@ -47,8 +47,8 @@ class Settings(BaseSettings):
     NAME_APP_2FA: str = "Auth Service"
 
     # REDIS
-    REDIS_HOST: str = ""
-    REDIS_PORT: int = 1
+    REDIS_HOST: str
+    REDIS_PORT: int
 
     # WHITELIST X-CLIENT-ID
     WHITELIST_CLIENT_IDS: str
