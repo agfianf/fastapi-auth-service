@@ -20,6 +20,7 @@ dependencies = [
     "uuid-utils==0.10.0",
     "slowapi==0.1.9",
     "python-jose>=3.4.0",
+    "structlog>=25.2.0",
 ]
 
 [dependency-groups]
