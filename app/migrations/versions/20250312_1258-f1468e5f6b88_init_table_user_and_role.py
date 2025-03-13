@@ -21,6 +21,33 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+def generate_base_audit() -> list:
+    """Generate base audit columns."""
+    return [
+        sa.Column(
+            "created_at",
+            type_=sa.TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            type_=sa.TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+            server_onupdate=sa.func.now(),
+        ),
+        sa.Column(
+            "deleted_at",
+            type_=sa.TIMESTAMP(timezone=True),
+            nullable=True,
+        ),
+        sa.Column("created_by", sa.String(), nullable=True),
+        sa.Column("updated_by", sa.String(), nullable=True),
+        sa.Column("deleted_by", sa.String(), nullable=True),
+    ]
+
+
 def upgrade() -> None:
     """Upgrade schema."""
     # Create roles table first
@@ -29,27 +56,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False, autoincrement=True),
         sa.Column("name", sa.VARCHAR(225), nullable=False, unique=True),
         sa.Column("description", sa.String(), nullable=True),
-        sa.Column(
-            "created_at",
-            type_=sa.TIMESTAMP(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-        sa.Column(
-            "updated_at",
-            type_=sa.TIMESTAMP(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-            server_onupdate=sa.func.now(),
-        ),
-        sa.Column(
-            "deleted_at",
-            type_=sa.TIMESTAMP(timezone=True),
-            nullable=True,
-        ),
-        sa.Column("created_by", sa.String(), nullable=True),
-        sa.Column("updated_by", sa.String(), nullable=True),
-        sa.Column("deleted_by", sa.String(), nullable=True),
+        *generate_base_audit(),
         sa.PrimaryKeyConstraint("id"),
         sa.Index("ix_roles_name", "name"),
     )
@@ -58,41 +65,23 @@ def upgrade() -> None:
         "users",
         sa.Column("uuid", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("role_id", sa.Integer(), nullable=True),
-        sa.Column("username", sa.String(), nullable=False, unique=True),
-        sa.Column("firstname", sa.String(), nullable=False),
-        sa.Column("midname", sa.String(), nullable=True),
-        sa.Column("lastname", sa.String(), nullable=True),
-        sa.Column("email", sa.String(), nullable=False, unique=True),
-        sa.Column("phone", sa.String(), nullable=True, unique=True),
+        sa.Column("username", sa.String(255), nullable=False, unique=True),
+        sa.Column("firstname", sa.String(255), nullable=False),
+        sa.Column("midname", sa.String(255), nullable=True),
+        sa.Column("lastname", sa.String(255), nullable=True),
+        sa.Column("email", sa.String(255), nullable=False, unique=True),
+        sa.Column("phone", sa.String(20), nullable=True, unique=True),
         sa.Column("telegram", sa.String(), nullable=True, unique=True),
         sa.Column("password_hash", sa.String(), nullable=False),
+        sa.Column("mfa_enabled", sa.Boolean(), nullable=True, server_default="false"),
+        sa.Column("mfa_secret", sa.String(255), nullable=True),
         sa.Column(
             "is_active",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("true"),
+            server_default=sa.text("false"),
         ),
-        sa.Column(
-            "created_at",
-            type_=sa.TIMESTAMP(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-        sa.Column(
-            "updated_at",
-            type_=sa.TIMESTAMP(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-            server_onupdate=sa.func.now(),
-        ),
-        sa.Column(
-            "deleted_at",
-            type_=sa.TIMESTAMP(timezone=True),
-            nullable=True,
-        ),
-        sa.Column("created_by", sa.String(), nullable=True),
-        sa.Column("updated_by", sa.String(), nullable=True),
-        sa.Column("deleted_by", sa.String(), nullable=True),
+        *generate_base_audit(),
         sa.ForeignKeyConstraint(
             ["role_id"],
             ["roles.id"],
@@ -109,35 +98,15 @@ def upgrade() -> None:
         "services",
         sa.Column("uuid", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
-        sa.Column("location", sa.String(), nullable=True),
-        sa.Column("description", sa.String(), nullable=True),
+        sa.Column("location", sa.String(255), nullable=True),
+        sa.Column("description", sa.String(255), nullable=True),
         sa.Column(
             "is_active",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("true"),
+            server_default=sa.text("false"),
         ),
-        sa.Column(
-            "created_at",
-            type_=sa.TIMESTAMP(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-        sa.Column(
-            "updated_at",
-            type_=sa.TIMESTAMP(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-            server_onupdate=sa.func.now(),
-        ),
-        sa.Column(
-            "deleted_at",
-            type_=sa.TIMESTAMP(timezone=True),
-            nullable=True,
-        ),
-        sa.Column("created_by", sa.String(), nullable=True),
-        sa.Column("updated_by", sa.String(), nullable=True),
-        sa.Column("deleted_by", sa.String(), nullable=True),
+        *generate_base_audit(),
         sa.PrimaryKeyConstraint("uuid"),
         sa.Index("ix_service_name", "name"),
     )
@@ -153,12 +122,8 @@ def upgrade() -> None:
             postgresql.UUID(as_uuid=True),
             nullable=False,
         ),
-        sa.Column(
-            "created_at",
-            type_=sa.TIMESTAMP(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
+        *generate_base_audit(),
+        sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(
             ["user_uuid"],
             ["users.uuid"],
@@ -171,7 +136,6 @@ def upgrade() -> None:
             name="fk_user_services_service_uuid",
             ondelete="CASCADE",
         ),
-        sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "user_uuid",
             "service_uuid",
