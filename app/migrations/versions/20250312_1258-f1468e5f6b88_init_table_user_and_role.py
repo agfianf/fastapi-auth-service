@@ -73,6 +73,8 @@ def upgrade() -> None:
         sa.Column("phone", sa.String(20), nullable=True, unique=True),
         sa.Column("telegram", sa.String(), nullable=True, unique=True),
         sa.Column("password_hash", sa.String(), nullable=False),
+        sa.Column("mfa_enabled", sa.Boolean(), nullable=True, server_default="false"),
+        sa.Column("mfa_secret", sa.String(255), nullable=True),
         sa.Column(
             "is_active",
             sa.Boolean(),
