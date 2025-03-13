@@ -21,6 +21,7 @@ dependencies = [
     "slowapi==0.1.9",
     "python-jose>=3.4.0",
     "structlog>=25.2.0",
+    "passlib>=1.7.4",
 ]
 
 [dependency-groups]

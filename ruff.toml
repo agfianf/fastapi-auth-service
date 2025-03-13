@@ -44,6 +44,9 @@ ignore = [
   "COM812"
 ]
 
+fixable = ["ALL"]
+unfixable = ["F401"]
+
 [lint.per-file-ignores]
 "app/migrations/env.py" = ["E", "F", "I", "UP", "B", "W", "C90", "N", "D", "PYI", "PT", "RET", "SIM", "ARG", "ERA"]
 "test_*.py" = ["S101"]
