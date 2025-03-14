@@ -8,6 +8,7 @@ wheels/
 .DS_Store
 .ruff_cache/
 .mypy_cache/
+.pytest_cache/
 
 # Virtual environments
 .venv

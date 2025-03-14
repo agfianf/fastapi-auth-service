@@ -6,25 +6,32 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     image: auth-service:dev
+    container_name: auth-service
+    working_dir: /code/src
     ports:
       - "8123:8000"
     env_file:
-      - ./app/.env.dev
+      - ./src/app/.env.example
     environment:
-      - PYTHONPATH=/code/app
-    # command: sleep infinity
-    # comment this because use .devcontainer for dev
-    command: ["/code/.venv/bin/uvicorn", "app.main:app", "--host",  "0.0.0.0", "--port", "8000", "--reload"]
+      - PYTHONPATH=/code/src
+    tty: true
+    command: ["/code/.venv/bin/uvicorn", "app.main:app", "--host",  "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/code/src/app"]
     volumes:
-      - ./app:/code/app
+      - ./src/app:/code/src/app
+      - ./src/tests:/code/src/tests
+      - ./src/migrations:/code/src/migrations
+      - ./src/alembic.ini:/code/src/alembic.ini
     restart: unless-stopped
     networks:
       - auth-network
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
 
   db:
+    container_name: db-auth
     image: postgres:17.4
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data/
@@ -44,19 +51,19 @@ services:
       - auth-network
 
   redis:
-    container_name: ags-redis
+    container_name: redis-auth
     image: redis/redis-stack:7.2.0-v11
     ports:
       - "18002:6379" # api
       - "18003:8001" # dashboard
-    networks:
-      - auth-network
     restart: unless-stopped
     healthcheck:
       interval: 5s
       timeout: 5s
       retries: 5
       test: ["CMD-SHELL", "redis-cli -h localhost -p 6379 ping"]
+    networks:
+      - auth-network
 
 
 networks:
