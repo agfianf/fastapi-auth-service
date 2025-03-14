@@ -19,3 +19,6 @@ down:
 
 exec:
 	docker exec -it auth-service bash
+
+test:
+	pytest --cov-report=term-missing --cov=app tests/
