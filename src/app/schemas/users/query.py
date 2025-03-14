@@ -15,9 +15,5 @@ class CreateUserQuery(CreateUserPayload):
 
 
 class CreateUserQueryResponse(UserBase):
-    password_hash: str = Field(
-        ...,
-        description="Password hash of the user",
-        examples=["$2b$12$KIX5v9z5Qj5Z5Z5Z5Z5Z5O"],
-        exclude=True,
-    )
+    password_hash: str | None = Field(None, exclude=True)
+    mfa_secret: str | None = Field(None, exclude=True)

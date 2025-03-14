@@ -55,18 +55,18 @@ def query_exceptions_handler(func: Callable[P, Awaitable[T]]) -> Callable[P, Awa
             if "duplicate key" in error_msg:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Resource already exists or registered: {error_msg}",
+                    detail="Resource already exists or registered.",
                 ) from e
 
             if "null value in column" in error_msg:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Please fill in all required fields: {error_msg}",
+                    detail="Please fill in all required fields.",
                 ) from e
 
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Resource already exists or constraint violation: {error_msg}",
+                detail="Resource already exists or constraint violation.",
             ) from e
 
         except SQLAlchemyError as e:
@@ -76,7 +76,7 @@ def query_exceptions_handler(func: Callable[P, Awaitable[T]]) -> Callable[P, Awa
 
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database operation failed: {error_msg}",
+                detail="Database operation failed.",
             ) from e
 
         except Exception as e:
@@ -86,7 +86,7 @@ def query_exceptions_handler(func: Callable[P, Awaitable[T]]) -> Callable[P, Awa
 
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An unexpected database error occurred: {error_msg}",
+                detail="An unexpected database error occurred.",
             ) from e
 
     return async_wrapper

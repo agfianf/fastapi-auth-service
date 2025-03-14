@@ -47,6 +47,7 @@ async def sign_up_with_mfa(
     return JsonResponse(
         data={
             "qr_code_bs64": qr_code_bs64,
+            "user": user_detail,
         },
         message="Success register user",
         status_code=status.HTTP_201_CREATED,
