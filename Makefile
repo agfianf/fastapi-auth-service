@@ -17,3 +17,5 @@ up:
 down:
 	docker-compose down
 
+exec:
+	docker exec -it auth-service bash

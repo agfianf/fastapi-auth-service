@@ -293,6 +293,7 @@ dev = [
     { name = "ruff" },
 ]
 tests = [
+    { name = "httpx" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -326,6 +327,7 @@ dev = [
     { name = "ruff", specifier = "==0.9.10" },
 ]
 tests = [
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "pytest", specifier = "==8.3.5" },
     { name = "pytest-asyncio", specifier = ">=0.25.3" },
     { name = "pytest-cov", specifier = "==6.0.0" },
