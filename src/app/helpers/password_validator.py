@@ -53,6 +53,8 @@ class PasswordValidate:
         if pwd != conf_pwd:
             is_valid = False
             messages.append("Password confirmation does not match")
+            # we return early if password and confirm_password are not the same
+            return is_valid, messages
 
         # if password have similarity with username
         sim_username_pwd = calculate_string_similarity(username, pwd)
@@ -72,9 +74,9 @@ class PasswordValidate:
             )
 
         # check length, uppercase, lowercase, number, special character
-        is_valid, ls_messages = validate_password_complexity(pwd)
-        if not is_valid:
-            is_valid = False
+        is_valid_complex, ls_messages = validate_password_complexity(pwd)
+        if is_valid_complex is False:
+            is_valid = is_valid_complex
             messages.extend(ls_messages)
 
         return is_valid, messages
@@ -88,9 +90,11 @@ def calculate_string_similarity(str1: str, str2: str) -> float:
 def contains_common_substitutions(username: str, password: str) -> bool:
     """Check if password contains common substitutions of username."""
     modified_username = username.lower()
+    modified_password = password.lower()
     for char, num in COMMON_SUBSTITUTIONS.items():
         modified_username = modified_username.replace(char, num)
-    return modified_username in password.lower()
+        modified_password = modified_password.replace(char, num)
+    return (modified_username in modified_password) or (modified_password in modified_username)
 
 
 def validate_password_complexity(password: str) -> tuple[bool, list[str]]:
