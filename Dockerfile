@@ -15,7 +15,9 @@ RUN --mount=from=ghcr.io/astral-sh/uv:0.6.6,source=/uv,target=/bin/uv \
     uv sync --frozen --no-dev --no-cache
 
 # Copy the application into the container.
-COPY ./app /code/app
+COPY ./src/app /code/src/app
+COPY ./src/migrations /code/src/migrations
+COPY ./src/alembic.ini /code/src/alembic.ini
 
 # Create nonroot user and set permissions
 RUN groupadd -r nonroot && useradd -r -g nonroot nonroot

@@ -1,0 +1,40 @@
+name: Test and Format
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.pre-commit-config.yaml'
+      - 'mkdocs.yml'
+      - 'CHANGELOG.md'
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Install uv and set the python version
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: 3.12
+
+      - name: 📦 Install the depedencies
+        run: uv sync --all-groups
+
+      - name: 🔍 Checking linter and formatting
+        run: uvx ruff check src/
+
+      - name: 📊 Run tests with Coverage
+        run: |
+          cd src
+          uv run pytest --cov-report=term-missing --cov=app tests/
+          uv run coverage report --fail-under=35
