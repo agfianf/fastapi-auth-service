@@ -27,8 +27,8 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: 3.12
 
-      - name: 📦 Install the project
-        run: uv sync --all-groups --no-group dev-model
+      - name: 📦 Install the depedencies
+        run: uv sync --all-groups
 
       - name: 🔍 Checking linter and formatting
         run: uvx ruff check
