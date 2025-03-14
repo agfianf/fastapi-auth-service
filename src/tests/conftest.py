@@ -1,21 +1,12 @@
-# tests/conftest.py
-from unittest.mock import AsyncMock
+# conftest.py
+import pytest_asyncio
 
-import pytest
+from httpx import ASGITransport, AsyncClient
 
-from fastapi.testclient import TestClient
-
-from app.main import app, lifespan
+from app.main import app
 
 
-@pytest.fixture
-async def client():
-    async with lifespan(app) as state:
-        with TestClient(app) as client:
-            yield client, state
-
-
-@pytest.fixture
-def mock_auth_service():
-    auth_service = AsyncMock()
-    return auth_service
+@pytest_asyncio.fixture
+async def async_client():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
