@@ -17,6 +17,9 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
       - name: 🐍 Install uv and set the python version
         uses: astral-sh/setup-uv@v5
         with:
