@@ -4,8 +4,16 @@ from collections.abc import Awaitable, Callable
 from functools import wraps
 from typing import ParamSpec, TypeVar
 
-from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError, NoResultFound, SQLAlchemyError
+
+from app.exceptions.database import (
+    DataAlreadyExistsException,
+    DatabaseException,
+    DataDuplicateException,
+    DataNotFoundException,
+    DataNotNullException,
+    DataOperationException,
+)
 
 
 T = TypeVar("T")
@@ -41,11 +49,7 @@ def query_exceptions_handler(func: Callable[P, Awaitable[T]]) -> Callable[P, Awa
             error_details = f"Data not found: {str(e)}"
             print(f"NoResultFound: {error_details}")
             print(f"Traceback: {traceback.format_exc()}")
-
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=error_details,
-            ) from e
+            raise DataNotFoundException(detail=error_details) from e
 
         except IntegrityError as e:
             error_trace = traceback.format_exc()
@@ -53,40 +57,23 @@ def query_exceptions_handler(func: Callable[P, Awaitable[T]]) -> Callable[P, Awa
             print(f"Database integrity error: {error_msg}\n{error_trace}")
 
             if "duplicate key" in error_msg:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Resource already exists or registered.",
-                ) from e
+                raise DataDuplicateException(detail=f"{e}") from e
 
             if "null value in column" in error_msg:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Please fill in all required fields.",
-                ) from e
+                raise DataNotNullException(detail=f"{e}") from e
 
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Resource already exists or constraint violation.",
-            ) from e
+            raise DataAlreadyExistsException(detail=f"{e}") from e
 
         except SQLAlchemyError as e:
             error_trace = traceback.format_exc()
             error_msg = str(e)
             print(f"Database error: {error_msg}\n{error_trace}")
-
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Database operation failed.",
-            ) from e
+            raise DataOperationException(f"{e}") from e
 
         except Exception as e:
             error_trace = traceback.format_exc()
             error_msg = str(e)
             print(f"Unexpected database error: {error_msg}\n{error_trace}")
-
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="An unexpected database error occurred.",
-            ) from e
+            raise DatabaseException() from e
 
     return async_wrapper

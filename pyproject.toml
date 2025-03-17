@@ -37,3 +37,20 @@ tests = [
     "pytest-asyncio>=0.25.3",
     "pytest-cov==6.0.0",
 ]
+
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::DeprecationWarning:passlib.*:",
+    "ignore::DeprecationWarning:argon2.*:"
+]
+testpaths = ["src/tests"]
+pythonpath = ["src"]
+addopts = "--cov-report=term-missing --cov=src/app"
+asyncio_default_fixture_loop_scope = "function"  # for pytest-asyncio so that the default loop is not shared between tests
+
+[tool.coverage.run]
+source = ["src/app"]
+
+[tool.coverage.report]
+fail_under = 50

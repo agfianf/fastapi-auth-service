@@ -1,6 +1,5 @@
 from typing import Generic
 
-from fastapi import status
 from pydantic import BaseModel
 from typing_extensions import TypeVar
 
@@ -23,4 +22,4 @@ class JsonResponse(BaseModel, Generic[T, M]):
     message: str = None
     success: bool = True
     meta: M = None
-    status_code: int = status.HTTP_200_OK
+    status_code: int

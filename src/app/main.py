@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from app.config import settings
+from app.integrations.redis import RedisHelper
 from app.repositories.auth import AuthAsyncRepositories
 from app.routers.auth import router as auth_router
 from app.services.auth import AuthService
@@ -18,8 +19,12 @@ from app.services.auth import AuthService
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa
     print("Initializing resources...")
+    # integration
+    redis = RedisHelper()
+
     auth_service = AuthService(
         repo_auth=AuthAsyncRepositories,
+        redis=redis,
     )
     yield {
         "auth_service": auth_service,

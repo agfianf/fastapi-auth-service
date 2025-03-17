@@ -1,6 +1,23 @@
 from fastapi import HTTPException, status
 
 
+# User Validator
+class SignInFailureException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication failed: Invalid username or password",
+        )
+
+
+class UserIsUnactiveException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication failed: User is inactive",
+        )
+
+
 # JWT exceptions
 class InvalidCredentialsHeaderException(HTTPException):
     def __init__(self):

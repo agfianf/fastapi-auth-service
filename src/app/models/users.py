@@ -1,4 +1,4 @@
-from sqlalchemy import UUID, VARCHAR, Boolean, Column, Integer, String, Table, text
+from sqlalchemy import UUID, VARCHAR, Boolean, Column, ForeignKey, Integer, String, Table, text
 
 from app.helpers.database import metadata
 from app.models._base_default import generate_base_audit
@@ -10,7 +10,7 @@ users_table = Table(
     "users",
     metadata,
     Column("uuid", UUID(as_uuid=True), primary_key=True),
-    Column("role_id", Integer, nullable=True),
+    Column("role_id", Integer, ForeignKey("roles.id"), nullable=True),
     Column("username", VARCHAR(225), nullable=False, unique=True),
     Column("firstname", VARCHAR(225), nullable=False),
     Column("midname", VARCHAR(225), nullable=True),

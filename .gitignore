@@ -15,3 +15,4 @@ wheels/
 
 # Secret files
 .env
+.coverage
