@@ -34,6 +34,4 @@ jobs:
         run: uvx ruff check src/
 
       - name: 📊 Run tests with Coverage
-        run: |
-          uv run pytest -v
-          uv run coverage report
+        run: PYTHONPATH=src uv run pytest
