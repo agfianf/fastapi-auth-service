@@ -1,4 +1,5 @@
-from pydantic import Field
+from pydantic import BaseModel, Field
+from uuid_utils.compat import UUID
 
 from app.schemas.users.base import UserBase
 from app.schemas.users.payload import CreateUserPayload
@@ -17,3 +18,62 @@ class CreateUserQuery(CreateUserPayload):
 class CreateUserQueryResponse(UserBase):
     password_hash: str | None = Field(None, exclude=True)
     mfa_secret: str | None = Field(None, exclude=True)
+
+    def transform_jwt(self, role: str | None) -> dict:
+        """Transform the user object to a JWT token payload."""
+        data = self.jwt_data(role=role)
+        return data
+
+
+class UserMembership(BaseModel):
+    uuid: UUID = Field(
+        ...,
+        description="UUID of the user membership",
+        examples=["123e4567-e89b-12d3-a456-426614174000"],
+    )
+    name: str = Field(
+        ...,
+        description="Name of the user membership",
+        examples=["Admin"],
+    )
+    description: str | None = Field(
+        None,
+        description="Description of the user membership",
+        examples=["Administrator role with full access"],
+    )
+    role: str = Field(
+        ...,
+        description="Role of the user membership",
+        examples=["admin", "user"],
+    )
+    member_is_active: bool = Field(
+        ...,
+        description="Is the user membership active",
+        examples=[True],
+    )
+    service_is_active: bool = Field(
+        ...,
+        description="Is the service active",
+        examples=[True],
+    )
+
+
+class UserMembershipQueryReponse(UserBase):
+    """Create User Membership Query."""
+
+    password_hash: str | None = Field(None, exclude=True)
+    mfa_secret: str | None = Field(None, exclude=True)
+    services: list[UserMembership] = Field(
+        ...,
+        description="List of services for the user membership",
+        examples=[
+            {
+                "uuid": "123e4567-e89b-12d3-a456-426614174000",
+                "name": "Admin",
+                "description": "Administrator role with full access",
+                "role": "admin",
+                "member_is_active": True,
+                "service_is_active": True,
+            },
+        ],
+    )

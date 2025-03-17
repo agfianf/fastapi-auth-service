@@ -130,6 +130,7 @@ def upgrade() -> None:
         sa.Column("user_uuid", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("service_uuid", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("role_id", sa.Integer(), nullable=False),
+        sa.Column("is_active", sa.Boolean(), nullable=False, server_default="false"),
         *generate_base_audit(),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(
