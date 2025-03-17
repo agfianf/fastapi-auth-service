@@ -1,11 +1,5 @@
-import datetime as dt
-
-from datetime import datetime, timedelta
-
 from sqlalchemy import URL
 from uuid_utils.compat import UUID, uuid7
-
-from app.config import settings
 
 
 def generate_connection_url(
@@ -59,60 +53,3 @@ def generate_uuid() -> UUID:
 
     """
     return uuid7()
-
-
-def generate_refresh_cookies(
-    refresh_token: str,
-    is_https: bool = False,
-) -> dict:
-    """Generate cookie settings for refresh token.
-
-    Parameters
-    ----------
-    refresh_token : str
-        The refresh token to store in the cookie.
-    is_https : bool, optional
-        Whether the connection is secure (HTTPS), by default False.
-
-    Returns
-    -------
-    dict
-        Dictionary containing cookie settings.
-
-    """
-    # Calculate expiration time
-    expire_minutes = settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES
-    expire_time = datetime.now(tz=dt.UTC) + timedelta(minutes=expire_minutes)
-
-    return {
-        "key": "refresh_token_app",
-        "value": refresh_token,
-        "path": "/",
-        "httponly": True,
-        "secure": is_https,
-        "samesite": "none" if is_https else "lax",
-        "max_age": expire_minutes * 60,
-        "expires": expire_time,
-    }
-
-
-def generate_delete_refresh_cookies(is_https: bool = False) -> dict:
-    """Generate cookie settings to delete refresh token cookie.
-
-    Parameters
-    ----------
-    is_https : bool, optional
-        Whether the connection is secure (HTTPS), by default False.
-
-    Returns
-    -------
-    dict
-        Dictionary containing cookie settings for deletion.
-
-    """
-    return {
-        "key": "refresh_token_app",
-        "path": "/",
-        "httponly": True,
-        "samesite": "none" if is_https else "lax",
-    }

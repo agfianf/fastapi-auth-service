@@ -91,28 +91,17 @@ class CreateUserPayload(BaseModel):
         return data
 
 
-class UpdateUser(BaseModel):
-    # NotYetImplemented
-    uuid: str = Field(..., description="UUID of the user")
-    role_id: int | None = Field(None, description="ID of the role")
-    username: str | None = Field(None, description="Username of the user")
-    firstname: str | None = Field(None, description="Firstname of the user")
-    midname: str | None = Field(None, description="Midname of the user")
-    lastname: str | None = Field(None, description="Lastname of the user")
-    email: EmailStr | None = Field(None, description="Email of the user")
-    phone: str | None = Field(None, description="Phone of the user")
-    telegram: str | None = Field(None, description="Telegram of the user")
-    is_active: bool | None = Field(None, description="Is the user active")
-
-    def transform(self) -> dict:
-        return self.model_dump(exclude_none=True)
-
-
-class UpdatePasswordUserOnly(BaseModel):
-    # NotYetImplemented
-    uuid: str = Field(..., description="UUID of the user")
-    password: str = Field(..., description="Password of the user")
-    password_confirm: str = Field(..., description="Password confirmation of the user")
-
-    def transform(self) -> dict:
-        return self.model_dump()
+class SignInPayload(BaseModel):
+    username: str = Field(
+        ...,
+        min_length=5,
+        max_length=255,
+        description="Username of the user",
+        examples=["johndoe"],
+    )
+    password: SecretStr = Field(
+        ...,
+        min_length=8,
+        max_length=255,
+        description="Password of the user",
+    )
