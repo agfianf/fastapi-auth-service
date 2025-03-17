@@ -35,9 +35,4 @@ jobs:
         run: uvx ruff check src/
 
       - name: 📊 Run tests with Coverage
-        run: |
-          pwd
-          ls -la
-          echo $PYTHONPATH
-          uv run pytest -v --version
-          uv run pytest -v --showlocals --log-cli-level=DEBUG
+        run: uv run pytest
