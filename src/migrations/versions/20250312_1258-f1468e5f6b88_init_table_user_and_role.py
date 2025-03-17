@@ -51,7 +51,7 @@ def generate_base_audit() -> list:
 def upgrade() -> None:
     """Upgrade schema."""
     # Create roles table first
-    op.create_table(
+    roles_table = op.create_table(
         "roles",
         sa.Column("id", sa.Integer(), nullable=False, autoincrement=True),
         sa.Column("name", sa.VARCHAR(225), nullable=False, unique=True),
@@ -59,6 +59,17 @@ def upgrade() -> None:
         *generate_base_audit(),
         sa.PrimaryKeyConstraint("id"),
         sa.Index("ix_roles_name", "name"),
+    )
+
+    op.bulk_insert(
+        roles_table,
+        [
+            {"name": "superadmin", "description": "Super Administrator with full access"},
+            {"name": "admin", "description": "Administrator with elevated permissions"},
+            {"name": "staff", "description": "Staff with operational access"},
+            {"name": "member", "description": "Regular member with basic access"},
+            {"name": "guest", "description": "Guest with limited access"},
+        ],
     )
 
     op.create_table(
