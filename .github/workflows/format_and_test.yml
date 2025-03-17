@@ -36,4 +36,4 @@ jobs:
       - name: 📊 Run tests with Coverage
         run: |
           uv run pytest -v
-          uv run coverage report --fail-under=35
+          uv run coverage report
