@@ -4,8 +4,8 @@ import pytest
 
 from fastapi import status
 
-from app.depedencies.database import get_async_conn, get_async_transaction_conn
-from app.main import app  # Tambahkan ini di bagian atas file test
+from app.depedencies.database import get_async_conn, get_async_transaction_conn  # noqa: F401
+from app.main import app  # noqa: F401
 from app.schemas.users import SignInResponse
 
 
@@ -129,16 +129,16 @@ from app.schemas.users import SignInResponse
         ),
     ],
 )
-async def test_sign_up(async_client, user_payload, expected_status, mock_return, expected_message):
+async def test_sign_up(async_client, db_conn_trans, user_payload, expected_status, mock_return, expected_message):  # noqa: ARG001
     # Creating a mock for auth_service function from app state
-    mock_connection = AsyncMock()
+    # mock_connection = AsyncMock() # noqa: ERA001
 
     # mock services
     mock_auth_service = AsyncMock()
     mock_auth_service.sign_up.return_value = mock_return
 
     # Override dependency untuk koneksi database
-    app.dependency_overrides[get_async_transaction_conn] = lambda: mock_connection
+    # app.dependency_overrides[get_async_transaction_conn] = lambda: mock_connection # noqa: ERA001
 
     # # Patch request.state.__getattr__ to return auth_service
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_auth_service):
@@ -208,16 +208,16 @@ async def test_sign_up(async_client, user_payload, expected_status, mock_return,
         ),
     ],
 )
-async def test_sign_in(async_client, signin_payload, mock_return, expected_status, expected_message):
+async def test_sign_in(async_client, db_conn, signin_payload, mock_return, expected_status, expected_message):  # noqa: ARG001
     # create mock connection
-    mock_connection = AsyncMock()  # noqa: F841
+    # mock_connection = AsyncMock()  # noqa: ERA001, F841
 
     # Creating a mock for auth_service function from app state
     mock_auth_service = AsyncMock()
     mock_auth_service.sign_in.return_value = mock_return
 
     # Override dependency untuk koneksi database
-    app.dependency_overrides[get_async_conn] = lambda: mock_connection
+    # app.dependency_overrides[get_async_conn] = lambda: mock_connection  # noqa: ERA001
 
     # Patch request.state.__getattr__ to return auth_service
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_auth_service):

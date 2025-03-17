@@ -6,35 +6,35 @@ import pytest_asyncio
 
 from httpx import ASGITransport, AsyncClient
 
+from app.depedencies.database import get_async_conn, get_async_transaction_conn
 from app.main import app
-
-
-# @pytest_asyncio.fixture
-# async def async_client():
-#     # Create a test app state with mocked services
-#     app.state.auth_service = MagicMock()  # noqa: ERA001
-
-#     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-#         yield client
 
 
 @pytest_asyncio.fixture
 async def async_client():
-    # Buat client tanpa menyiapkan mock di sini
-    # Biarkan setiap test mengatur mock-nya sendiri
+    # Don't not create mock connection here
+    # because it will be shared across all tests
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
 
 
 @pytest.fixture
-def mock_auth_service():
-    """Create a mock auth service for testing."""
-    auth_service = AsyncMock()
-    return auth_service
+async def db_conn_trans():
+    mock_connection = AsyncMock()
+    app.dependency_overrides[get_async_transaction_conn] = lambda: mock_connection
+
+    yield mock_connection  # Mengembalikan mock connection untuk digunakan dalam test
+
+    # Bersihkan override setelah test selesai
+    app.dependency_overrides.pop(get_async_transaction_conn, None)
 
 
 @pytest.fixture
-def setup_app_with_mocks(mock_auth_service):
-    """Set up the app with all required mocks."""
-    app.state.auth_service = mock_auth_service
-    return app
+async def db_conn():
+    mock_connection = AsyncMock()
+    app.dependency_overrides[get_async_conn] = lambda: mock_connection
+
+    yield mock_connection  # Mengembalikan mock connection untuk digunakan dalam test
+
+    # Bersihkan override setelah test selesai
+    app.dependency_overrides.pop(get_async_conn, None)
