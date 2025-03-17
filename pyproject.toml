@@ -47,6 +47,7 @@ filterwarnings = [
 testpaths = ["src/tests"]
 pythonpath = ["src"]
 addopts = "--cov-report=term-missing --cov=src/app"
+asyncio_default_fixture_loop_scope = "function"  # for pytest-asyncio so that the default loop is not shared between tests
 
 [tool.coverage.run]
 source = ["src/app"]
