@@ -44,12 +44,12 @@ filterwarnings = [
     "ignore::DeprecationWarning:passlib.*:",
     "ignore::DeprecationWarning:argon2.*:"
 ]
-testpaths = ["./src/tests"]
-pythonpath = ["./src"]
+testpaths = ["src/tests"]
+pythonpath = ["src"]
 addopts = "--cov-report=term-missing --cov=src/app"
 
 [tool.coverage.run]
-source = ["./src/app"]
+source = ["src/app"]
 
 [tool.coverage.report]
 fail_under = 50
