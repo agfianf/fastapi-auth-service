@@ -1,6 +1,8 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request, Response, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.depedencies.database import get_async_conn, get_async_transaction_conn
@@ -44,12 +46,16 @@ async def sign_up(
         payload=payload,
         connection=connection,
     )
-    return JsonResponse(
+    content = JsonResponse(
         data={
             "qr_code_bs64": qr_code_bs64,
             "user": user_detail,
         },
         message="Success register user",
+        status_code=status.HTTP_201_CREATED,
+    )
+    return JSONResponse(
+        content=jsonable_encoder(content),
         status_code=status.HTTP_201_CREATED,
     )
 
@@ -82,8 +88,13 @@ async def sign_in(
     )
     status_code = status.HTTP_200_OK if signin_response.mfa_required is False else status.HTTP_202_ACCEPTED
 
-    return JsonResponse(
+    content = JsonResponse(
         data=signin_response,
         message=msg,
+        status_code=status_code,
+    )
+
+    return JSONResponse(
+        content=jsonable_encoder(content),
         status_code=status_code,
     )

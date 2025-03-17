@@ -16,6 +16,7 @@ class CreateUserQuery(CreateUserPayload):
 
 
 class CreateUserQueryResponse(UserBase):
+    role_id: int | None = Field(None, exclude=True)
     password_hash: str | None = Field(None, exclude=True)
     mfa_secret: str | None = Field(None, exclude=True)
 
