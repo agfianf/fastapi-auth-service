@@ -1,7 +1,6 @@
 # conftest.py
 from unittest.mock import AsyncMock
 
-import pytest
 import pytest_asyncio
 
 from httpx import ASGITransport, AsyncClient
@@ -18,7 +17,7 @@ async def async_client():
         yield client
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_conn_trans():
     mock_connection = AsyncMock()
     app.dependency_overrides[get_async_transaction_conn] = lambda: mock_connection
@@ -29,7 +28,7 @@ async def db_conn_trans():
     app.dependency_overrides.pop(get_async_transaction_conn, None)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_conn():
     mock_connection = AsyncMock()
     app.dependency_overrides[get_async_conn] = lambda: mock_connection
