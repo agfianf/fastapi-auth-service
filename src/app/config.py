@@ -4,15 +4,20 @@ This module handles all configuration settings for the application,
 including database connections, authentication parameters, and security settings.
 """
 
+import os
+
 from typing import Final
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+path_env = os.path.join(os.path.dirname(__file__), ".env.example")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         validate_default=False,
-        env_file="./app/.env.example",
+        env_file=path_env,
         extra="ignore",
     )
 
