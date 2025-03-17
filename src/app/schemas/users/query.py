@@ -92,5 +92,7 @@ class UserMembershipQueryReponse(UserBase):
         data["uuid"] = str(data["uuid"])
         data["created_at"] = str(data["created_at"])
         data["updated_at"] = str(data["updated_at"])
+        for service in data["services"]:
+            service["uuid"] = str(service["uuid"])
 
         return data
