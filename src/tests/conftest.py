@@ -19,6 +19,12 @@ async def async_client():
 
 @pytest_asyncio.fixture
 async def db_conn_trans():
+    """Fixture to mocking database connection for transaction tests.
+
+    Each endpoint will contain dependecny injection to get_async_transaction_conn which is to get database connection
+    for transaction. We will mock this connection to avoid real database connection
+    and to speed up the test.
+    """
     mock_connection = AsyncMock()
     app.dependency_overrides[get_async_transaction_conn] = lambda: mock_connection
 
@@ -30,10 +36,16 @@ async def db_conn_trans():
 
 @pytest_asyncio.fixture
 async def db_conn():
+    """Fixture to mocking database connection for non-transaction tests.
+
+    Each endpoint will contain dependecny injection to get_async_conn which is to get database connection
+    for non-transaction. We will mock this connection to avoid real database connection
+    and to speed up the test.
+    """
     mock_connection = AsyncMock()
     app.dependency_overrides[get_async_conn] = lambda: mock_connection
 
-    yield mock_connection  # Mengembalikan mock connection untuk digunakan dalam test
+    yield mock_connection  # return mock_connection
 
-    # Bersihkan override setelah test selesai
+    # cleanup override after test
     app.dependency_overrides.pop(get_async_conn, None)

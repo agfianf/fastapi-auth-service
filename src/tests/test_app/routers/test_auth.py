@@ -4,8 +4,6 @@ import pytest
 
 from fastapi import status
 
-from app.depedencies.database import get_async_conn, get_async_transaction_conn  # noqa: F401
-from app.main import app  # noqa: F401
 from app.schemas.users import SignInResponse
 
 
@@ -130,15 +128,9 @@ from app.schemas.users import SignInResponse
     ],
 )
 async def test_sign_up(async_client, db_conn_trans, user_payload, expected_status, mock_return, expected_message):  # noqa: ARG001
-    # Creating a mock for auth_service function from app state
-    # mock_connection = AsyncMock() # noqa: ERA001
-
     # mock services
     mock_auth_service = AsyncMock()
     mock_auth_service.sign_up.return_value = mock_return
-
-    # Override dependency untuk koneksi database
-    # app.dependency_overrides[get_async_transaction_conn] = lambda: mock_connection # noqa: ERA001
 
     # # Patch request.state.__getattr__ to return auth_service
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_auth_service):
@@ -209,15 +201,11 @@ async def test_sign_up(async_client, db_conn_trans, user_payload, expected_statu
     ],
 )
 async def test_sign_in(async_client, db_conn, signin_payload, mock_return, expected_status, expected_message):  # noqa: ARG001
-    # create mock connection
-    # mock_connection = AsyncMock()  # noqa: ERA001, F841
-
     # Creating a mock for auth_service function from app state
+    # we will use this mock to simulate the behavior of the actual auth_service
+    # and return the desired mock_return value when called
     mock_auth_service = AsyncMock()
     mock_auth_service.sign_in.return_value = mock_return
-
-    # Override dependency untuk koneksi database
-    # app.dependency_overrides[get_async_conn] = lambda: mock_connection  # noqa: ERA001
 
     # Patch request.state.__getattr__ to return auth_service
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_auth_service):
@@ -226,8 +214,6 @@ async def test_sign_in(async_client, db_conn, signin_payload, mock_return, expec
     response_json = response.json()
 
     # Assertions
-    print(f"TEST >> {response_json=}")
-    print(f"TEST >> {response.status_code=} == {expected_status=}")
     assert response.status_code == expected_status
     assert response_json["status_code"] == expected_status
     assert response_json["message"] == expected_message
