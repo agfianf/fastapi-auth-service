@@ -1,5 +1,5 @@
 # conftest.py
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
@@ -9,11 +9,19 @@ from httpx import ASGITransport, AsyncClient
 from app.main import app
 
 
+# @pytest_asyncio.fixture
+# async def async_client():
+#     # Create a test app state with mocked services
+#     app.state.auth_service = MagicMock()  # noqa: ERA001
+
+#     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+#         yield client
+
+
 @pytest_asyncio.fixture
 async def async_client():
-    # Create a test app state with mocked services
-    app.state.auth_service = MagicMock()
-
+    # Buat client tanpa menyiapkan mock di sini
+    # Biarkan setiap test mengatur mock-nya sendiri
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
 

@@ -4,6 +4,8 @@ import pytest
 
 from fastapi import status
 
+from app.depedencies.database import get_async_conn, get_async_transaction_conn
+from app.main import app  # Tambahkan ini di bagian atas file test
 from app.schemas.users import SignInResponse
 
 
@@ -129,15 +131,16 @@ from app.schemas.users import SignInResponse
 )
 async def test_sign_up(async_client, user_payload, expected_status, mock_return, expected_message):
     # Creating a mock for auth_service function from app state
-
-    # mock connection
-    mock_connection = AsyncMock()  # noqa: F841
+    mock_connection = AsyncMock()
 
     # mock services
     mock_auth_service = AsyncMock()
     mock_auth_service.sign_up.return_value = mock_return
 
-    # Patch request.state.__getattr__ to return auth_service
+    # Override dependency untuk koneksi database
+    app.dependency_overrides[get_async_transaction_conn] = lambda: mock_connection
+
+    # # Patch request.state.__getattr__ to return auth_service
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_auth_service):
         response = await async_client.post("/api/v1/auth/sign-up", data=user_payload)
 
@@ -212,6 +215,9 @@ async def test_sign_in(async_client, signin_payload, mock_return, expected_statu
     # Creating a mock for auth_service function from app state
     mock_auth_service = AsyncMock()
     mock_auth_service.sign_in.return_value = mock_return
+
+    # Override dependency untuk koneksi database
+    app.dependency_overrides[get_async_conn] = lambda: mock_connection
 
     # Patch request.state.__getattr__ to return auth_service
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_auth_service):
