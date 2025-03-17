@@ -36,5 +36,5 @@ jobs:
       - name: 📊 Run tests with Coverage
         run: |
           cd src
-          uv run pytest --cov-report=term-missing --cov=app tests/
+          uv run pytest -v --cov-report=term-missing --cov=app tests/
           uv run coverage report --fail-under=35
