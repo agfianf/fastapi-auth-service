@@ -129,6 +129,11 @@ from app.schemas.users import SignInResponse
 )
 async def test_sign_up(async_client, user_payload, expected_status, mock_return, expected_message):
     # Creating a mock for auth_service function from app state
+
+    # mock connection
+    mock_connection = AsyncMock()  # noqa: F841
+
+    # mock services
     mock_auth_service = AsyncMock()
     mock_auth_service.sign_up.return_value = mock_return
 
@@ -201,6 +206,9 @@ async def test_sign_up(async_client, user_payload, expected_status, mock_return,
     ],
 )
 async def test_sign_in(async_client, signin_payload, mock_return, expected_status, expected_message):
+    # create mock connection
+    mock_connection = AsyncMock()  # noqa: F841
+
     # Creating a mock for auth_service function from app state
     mock_auth_service = AsyncMock()
     mock_auth_service.sign_in.return_value = mock_return
