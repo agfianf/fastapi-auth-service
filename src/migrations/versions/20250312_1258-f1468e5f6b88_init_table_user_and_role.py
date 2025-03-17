@@ -114,39 +114,43 @@ def upgrade() -> None:
     # Create a junction table to establish many-to-many relationship between
     # users and services
     op.create_table(
-        "user_services",
+        "service_memberships",
         sa.Column("id", sa.Integer(), nullable=False, autoincrement=True),
         sa.Column("user_uuid", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column(
-            "service_uuid",
-            postgresql.UUID(as_uuid=True),
-            nullable=False,
-        ),
+        sa.Column("service_uuid", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("role_id", sa.Integer(), nullable=False),
         *generate_base_audit(),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(
             ["user_uuid"],
             ["users.uuid"],
-            name="fk_user_services_user_uuid",
+            name="fk_service_memberships_user_uuid",
             ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["role_id"],
+            ["roles.id"],
+            name="fk_service_memberships_role_id",
+            ondelete="SET NULL",
         ),
         sa.ForeignKeyConstraint(
             ["service_uuid"],
             ["services.uuid"],
-            name="fk_user_services_service_uuid",
+            name="fk_service_memberships_service_uuid",
             ondelete="CASCADE",
         ),
         sa.UniqueConstraint(
             "user_uuid",
             "service_uuid",
-            name="uq_user_service",
+            "role_id",
+            name="uq_service_memberships_user_service_role",
         ),
     )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_table("user_services")
+    op.drop_table("service_memberships")
     op.drop_table("services")
     op.drop_table("users")
     op.drop_table("roles")

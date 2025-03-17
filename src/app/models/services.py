@@ -27,18 +27,20 @@ services_table = Table(
     *default_base_audit,
 )
 
-user_services_table = Table(
-    "user_services",
+service_memberships_table = Table(
+    "service_memberships",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("user_uuid", UUID(as_uuid=True), ForeignKey("users.uuid"), nullable=False),
     Column("service_uuid", UUID(as_uuid=True), ForeignKey("services.uuid"), nullable=False),
+    Column("role_id", Integer, ForeignKey("roles.id"), nullable=False),
     *default_base_audit_junction,
 
     UniqueConstraint(
         "user_uuid",
         "service_uuid",
-        name="uq_user_service",
+        "role_id",
+        name="uq_service_memberships_user_service_role",
     ),
 )
 

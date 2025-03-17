@@ -12,7 +12,8 @@ class ServicesBase(BaseModel, BaseAudit):
     is_active: bool = Field(False, description="Is the service active")
 
 
-class UserServiceBase(BaseModel, BaseAudit):
+class ServiceMembershipBase(BaseModel, BaseAudit):
     id: int = Field(..., description="ID of the user service")
     user_uuid: UUID = Field(..., description="UUID of the user")
     service_uuid: UUID = Field(..., description="UUID of the service")
+    role_id: int = Field(..., description="ID of the role")
