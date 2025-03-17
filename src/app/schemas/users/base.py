@@ -5,7 +5,7 @@ from app.schemas._default_base import BaseAudit
 
 
 class UserBase(BaseAudit):
-    uuid: UUID = Field(..., description="UUID of the service")
+    uuid: UUID = Field(..., description="UUIDv7 of the service")
     role_id: int | None = Field(None, description="ID of the role")
     username: str = Field(..., description="Username of the user")
     firstname: str = Field(..., description="Firstname of the user")

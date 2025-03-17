@@ -28,7 +28,7 @@ class CreateUserQueryResponse(UserBase):
 class UserMembership(BaseModel):
     uuid: UUID = Field(
         ...,
-        description="UUID of the user membership",
+        description="UUIDv7 of the user membership",
         examples=["123e4567-e89b-12d3-a456-426614174000"],
     )
     name: str = Field(
