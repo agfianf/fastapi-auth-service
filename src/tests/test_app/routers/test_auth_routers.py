@@ -249,7 +249,7 @@ async def test_sign_in(async_client, db_conn, signin_payload, mock_return, expec
 
 
 @pytest.mark.asyncio
-async def test_sign_out(async_client):
+async def test_sign_out(async_client, db_conn):  # noqa: ARG001
     # Setup client dengan cookies
     async_client.cookies.set("refresh_token_app", "mock_refresh_token")
 
@@ -305,7 +305,7 @@ async def test_sign_out(async_client):
 
 
 @pytest.mark.asyncio
-async def test_verify_mfa(async_client):
+async def test_verify_mfa(async_client, db_conn):  # noqa: ARG001
     verify_payload = {
         "mfa_token": "mock_mfa",
         "mfa_code": "123456",
