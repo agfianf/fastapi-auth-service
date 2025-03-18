@@ -199,13 +199,12 @@ async def refresh_token(  # noqa
 
     """
     auth_service: AuthService = request.state.auth_service
-    access_token = await auth_service.refresh_token(
-        refresh_token_app=refresh_token_app,
-    )
+
+    access_token = await auth_service.refresh_token(refresh_token_app=refresh_token_app)
 
     response.status_code = status.HTTP_200_OK
     return JsonResponse(
         data=access_token,
-        message="Success refresh token",
+        message="Success refresh access token",
         status_code=status.HTTP_200_OK,
     )
