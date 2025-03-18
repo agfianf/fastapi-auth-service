@@ -20,3 +20,11 @@ class SignInResponse(BaseModel):
         examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9"],
     )
     mfa_required: bool = Field(False, description="MFA required for login")
+
+
+class VerifyMFAResponse(BaseModel):
+    access_token: str | None = Field(
+        None,
+        description="JWT access token for authentication",
+        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9"],
+    )

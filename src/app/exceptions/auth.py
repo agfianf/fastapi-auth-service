@@ -1,6 +1,15 @@
 from fastapi import HTTPException, status
 
 
+# MFA exceptions
+class InvalidMFATokenException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid MFA token",
+        )
+
+
 # SignOut exceptions
 class AlreadySignedOutException(HTTPException):
     def __init__(self):

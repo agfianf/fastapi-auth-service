@@ -4,7 +4,7 @@ from app.schemas.users.payload import (
     SignInPayload,
 )
 from app.schemas.users.query import CreateUserQuery, CreateUserQueryResponse, UserMembershipQueryReponse
-from app.schemas.users.response import CreateUserResponse, SignInResponse
+from app.schemas.users.response import CreateUserResponse, SignInResponse, VerifyMFAResponse
 
 
 __all__ = [
@@ -16,4 +16,5 @@ __all__ = [
     "UserMembershipQueryReponse",
     "SignInPayload",
     "SignInResponse",
+    "VerifyMFAResponse",
 ]
