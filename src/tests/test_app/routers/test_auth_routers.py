@@ -5,7 +5,7 @@ import pytest
 from fastapi import status
 
 from app.schemas.users import SignInResponse
-from app.schemas.users.response import VerifyMFAResponse
+from app.schemas.users.response import AccessTokenResponse, VerifyMFAResponse
 
 
 @pytest.mark.asyncio
@@ -330,3 +330,36 @@ async def test_verify_mfa(async_client, db_conn):  # noqa: ARG001
 
     # Verify mock was called with correct parameters
     assert response.headers["set-cookie"] == "refresh_token=some_refresh_token; HttpOnly; Path=/; SameSite=lax"
+
+
+@pytest.mark.asyncio
+async def test_refresh(async_client):
+    # Setup client dengan cookies
+    async_client.cookies.set("refresh_token_app", "mock_refresh_token")
+
+    # Just to check if the cookie is set
+    assert "refresh_token_app" in async_client.cookies
+    assert async_client.cookies["refresh_token_app"] == "mock_refresh_token"
+
+    # Setup mock data
+    mock_auth_service = AsyncMock()
+    mock_auth_service.refresh_token.return_value = AccessTokenResponse(access_token="mock_access_token_new")
+
+    # Mock the JWT bearer dependency
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_auth_service):
+        # Make the request with a cookie
+        response = await async_client.post(
+            "/api/v1/auth/refresh",
+            headers={"Authorization": "Bearer mock_access_token_old"},
+        )
+
+    response_json = response.json()
+
+    # Assertions
+    assert response.status_code == status.HTTP_200_OK
+    assert response_json["status_code"] == status.HTTP_200_OK
+    assert response_json["message"] == "Success refresh access token"
+    assert response_json["data"]["access_token"] == "mock_access_token_new"
+
+    # Verify mock was called with correct parameters
+    mock_auth_service.refresh_token.assert_called_once_with(refresh_token_app="mock_refresh_token")
