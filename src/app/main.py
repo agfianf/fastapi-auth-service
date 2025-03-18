@@ -27,6 +27,7 @@ async def lifespan(app: FastAPI):  # noqa
         redis=redis,
     )
     yield {
+        "redis_helper": redis,
         "auth_service": auth_service,
     }
     print("Cleaning up resources...")

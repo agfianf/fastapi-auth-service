@@ -1,6 +1,11 @@
+import time
+
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from app.helpers.generator_jwt import generate_jwt_tokens, generate_temporary_mfa_token
+from app.exceptions.auth import AlreadySignedOutException, RefreshTokenNotFoundException
+from app.helpers.auth import decode_access_jwt, decode_refresh_jwt
+from app.helpers.generator_jwt import generate_delete_refresh_cookies, generate_jwt_tokens, generate_temporary_mfa_token
 from app.helpers.user_validator import verify_user_password, verify_user_status
 from app.integrations.mfa import TwoFactorAuth
 from app.integrations.redis import RedisHelper
@@ -92,3 +97,50 @@ class AuthService:
         )
 
         return signin_response, cookies
+
+    async def sign_out(
+        self,
+        access_token: str,
+        refresh_token_app: str,
+    ) -> tuple[dict, dict]:
+        if refresh_token_app is None or len(refresh_token_app) == 0:
+            raise RefreshTokenNotFoundException()
+
+        data_access = decode_access_jwt(token=access_token)
+        data_refresh = decode_refresh_jwt(token=refresh_token_app)
+
+        if data_access is None or data_refresh is None:
+            raise AlreadySignedOutException()
+
+        timenow = time.time()
+        expiry_access_sec = int(data_access.get("expire_time", 0) - timenow)
+        expiry_refresh_sec = int(data_refresh.get("expire_time", 0) - timenow)
+
+        is_access_token_revoked = self.redis.is_token_revoked(token=access_token)
+        is_refresh_token_revoked = self.redis.is_token_revoked(token=refresh_token_app)
+
+        if is_access_token_revoked is False:
+            self.redis.add_token_to_blacklist(
+                token=access_token,
+                expire_sec=expiry_access_sec,
+            )
+
+        if is_refresh_token_revoked is False:
+            self.redis.add_token_to_blacklist(
+                token=refresh_token_app,
+                expire_sec=expiry_refresh_sec,
+            )
+
+        if is_access_token_revoked and is_refresh_token_revoked:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=("Session has already been logged out. Please login again."),
+            )
+
+        delete_cookie = generate_delete_refresh_cookies()
+
+        print(f"delete_cookie: {delete_cookie}")
+        return {
+            "access_token_revoked": True,
+            "refresh_token_revoked": True,
+        }, delete_cookie

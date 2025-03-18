@@ -1,6 +1,23 @@
 from fastapi import HTTPException, status
 
 
+# SignOut exceptions
+class AlreadySignedOutException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Already signed out.",
+        )
+
+
+class RefreshTokenNotFoundException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token not found in request.",
+        )
+
+
 # User Validator
 class SignInFailureException(HTTPException):
     def __init__(self):
