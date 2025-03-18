@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -245,3 +245,59 @@ async def test_sign_in(async_client, db_conn, signin_payload, mock_return, expec
     assert "payload" in kwargs
     assert kwargs["payload"].username == signin_payload["username"]
     assert "connection" in kwargs
+
+
+@pytest.mark.asyncio
+async def test_sign_out(async_client):
+    # Setup client dengan cookies
+    async_client.cookies.set("refresh_token_app", "mock_refresh_token")
+
+    # Just to check if the cookie is set
+    assert "refresh_token_app" in async_client.cookies
+    assert async_client.cookies["refresh_token_app"] == "mock_refresh_token"
+
+    # Setup mock data
+    mock_delete_cookies = {"key": "refresh_token_app", "value": "", "httponly": True, "max_age": 0}
+    mock_jwt_data = ({"user_data": "test"}, "mock_access_token")
+    mock_is_revoked = {"access_token": True, "refresh_token": True}
+
+    # Mock the auth service
+    mock_auth_service = AsyncMock()
+    mock_auth_service.sign_out.return_value = (mock_is_revoked, mock_delete_cookies)
+
+    mock_response_delete_cookies = MagicMock()
+
+    # Mock the JWT bearer dependency
+    with (
+        patch("app.depedencies.auth.JWTBearer.__call__", return_value=mock_jwt_data),
+        patch("starlette.datastructures.State.__getattr__", return_value=mock_auth_service),
+        patch("fastapi.responses.Response.delete_cookie", mock_response_delete_cookies),
+    ):
+        # Make the request with a cookie
+        response = await async_client.delete(
+            "/api/v1/auth/sign-out",
+            headers={"Authorization": "Bearer mock_access_token"},
+        )
+        print(response.headers)
+
+    response_json = response.json()
+
+    # Assertions
+    assert response.status_code == status.HTTP_200_OK
+    assert response_json["status_code"] == status.HTTP_200_OK
+    assert response_json["message"] == "Successfully signed out"
+    assert response_json["data"] == mock_is_revoked
+
+    # Verify mock was called with correct parameters
+    mock_auth_service.sign_out.assert_called_once_with(
+        access_token="mock_access_token",
+        refresh_token_app="mock_refresh_token",
+    )
+
+    # Verify delete_cookie function was called with the correct parameters
+    mock_response_delete_cookies.assert_called_once_with(
+        key=mock_delete_cookies["key"],
+        value=mock_delete_cookies["value"],
+        httponly=mock_delete_cookies["httponly"],
+        max_age=mock_delete_cookies["max_age"],
+    )
