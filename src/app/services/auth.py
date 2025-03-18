@@ -3,8 +3,9 @@ import time
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from app.exceptions.auth import AlreadySignedOutException, RefreshTokenNotFoundException
-from app.helpers.auth import decode_access_jwt, decode_refresh_jwt
+from app.config import settings
+from app.exceptions.auth import AlreadySignedOutException, RefreshTokenNotFoundException, SessionExpiredException
+from app.helpers.auth import create_access_token, decode_access_jwt, decode_refresh_jwt
 from app.helpers.generator_jwt import generate_delete_refresh_cookies, generate_jwt_tokens, generate_temporary_mfa_token
 from app.helpers.user_validator import verify_mfa_credentials, verify_user_password, verify_user_status
 from app.integrations.mfa import TwoFactorAuth
@@ -19,6 +20,7 @@ from app.schemas.users import (
     UserMembershipQueryReponse,
     VerifyMFAResponse,
 )
+from app.schemas.users.response import AccessTokenResponse
 
 
 class AuthService:
@@ -173,3 +175,28 @@ class AuthService:
         )
 
         return VerifyMFAResponse(access_token=access_token), cookies
+
+    async def refresh_token(
+        self,
+        refresh_token_app: str | None,
+    ) -> AccessTokenResponse:
+        # check refresh token
+        if refresh_token_app is None:
+            raise RefreshTokenNotFoundException()
+
+        is_revoked = self.redis.is_token_revoked(token=refresh_token_app)
+        if is_revoked:
+            raise SessionExpiredException()
+
+        # check refresh token
+        data_user = decode_refresh_jwt(token=refresh_token_app)
+        if data_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired refresh token. Please login again.",
+            )
+        extend_time = 60 * settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES
+        data_user.update({"expire_time": time.time() + extend_time})
+        access_token = create_access_token(data=data_user)
+
+        return AccessTokenResponse(access_token=access_token)

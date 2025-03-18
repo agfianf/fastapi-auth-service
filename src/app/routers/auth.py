@@ -18,6 +18,7 @@ from app.schemas.users import (
     UserMembershipQueryReponse,
     VerifyMFAResponse,
 )
+from app.schemas.users.response import AccessTokenResponse
 from app.services.auth import AuthService
 
 
@@ -168,5 +169,43 @@ async def verify_mfa(  # noqa: N802
     return JsonResponse(
         data=access_token,
         message="Successfully signed in and verified MFA",
+        status_code=status.HTTP_200_OK,
+    )
+
+
+@router.post(
+    "/refresh",
+    response_model=JsonResponse[AccessTokenResponse, None],
+)
+@limiter.limit(critical_limit)
+async def refresh_token(  # noqa
+    request: Request,
+    response: Response,
+    refresh_token_app: str = Cookie(...),
+) -> JsonResponse[AccessTokenResponse, None]:
+    """Refresh access token using refresh token.
+
+    Parameters
+    ----------
+    request : Request
+        The FastAPI request object
+    refresh_token_app : str | None
+        Refresh token from cookie
+
+    Returns
+    -------
+    JsonResponse
+        Response containing new access token
+
+    """
+    auth_service: AuthService = request.state.auth_service
+    access_token = await auth_service.refresh_token(
+        refresh_token_app=refresh_token_app,
+    )
+
+    response.status_code = status.HTTP_200_OK
+    return JsonResponse(
+        data=access_token,
+        message="Success refresh token",
         status_code=status.HTTP_200_OK,
     )

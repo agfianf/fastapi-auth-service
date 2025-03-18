@@ -1,6 +1,14 @@
 from fastapi import HTTPException, status
 
 
+class SessionExpiredException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired. Please sign in again.",
+        )
+
+
 # MFA exceptions
 class InvalidMFATokenException(HTTPException):
     def __init__(self):

@@ -22,9 +22,13 @@ class SignInResponse(BaseModel):
     mfa_required: bool = Field(False, description="MFA required for login")
 
 
-class VerifyMFAResponse(BaseModel):
+class AccessTokenResponse(BaseModel):
     access_token: str | None = Field(
         None,
         description="JWT access token for authentication",
         examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9"],
     )
+
+
+class VerifyMFAResponse(AccessTokenResponse):
+    pass
