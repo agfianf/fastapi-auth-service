@@ -153,10 +153,7 @@ async def verify_mfa(  # noqa: N802
     username: Annotated[str, Form(...)],
     mfa_token: Annotated[str, Form(...)],
     mfa_code: Annotated[str, Form(...)],
-    connection: Annotated[
-        AsyncConnection,
-        Depends(get_async_conn),
-    ],
+    connection: Annotated[AsyncConnection, Depends(get_async_conn)],
 ) -> JsonResponse[VerifyMFAResponse, None]:
     auth_service: AuthService = request.state.auth_service
     access_token, cookies_refresh = await auth_service.verify_mfa(

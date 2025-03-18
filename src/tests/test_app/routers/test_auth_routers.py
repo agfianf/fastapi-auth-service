@@ -249,7 +249,7 @@ async def test_sign_in(async_client, db_conn, signin_payload, mock_return, expec
 
 
 @pytest.mark.asyncio
-async def test_sign_out(async_client, db_conn):  # noqa: ARG001
+async def test_sign_out(async_client):  # noqa: ARG001
     # Setup client dengan cookies
     async_client.cookies.set("refresh_token_app", "mock_refresh_token")
 
@@ -279,7 +279,6 @@ async def test_sign_out(async_client, db_conn):  # noqa: ARG001
             "/api/v1/auth/sign-out",
             headers={"Authorization": "Bearer mock_access_token"},
         )
-        print(response.headers)
 
     response_json = response.json()
 
