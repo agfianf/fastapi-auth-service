@@ -5,6 +5,7 @@ import pytest
 from fastapi import status
 
 from app.schemas.users import SignInResponse
+from app.schemas.users.response import VerifyMFAResponse
 
 
 @pytest.mark.asyncio
@@ -301,3 +302,32 @@ async def test_sign_out(async_client):
         httponly=mock_delete_cookies["httponly"],
         max_age=mock_delete_cookies["max_age"],
     )
+
+
+@pytest.mark.asyncio
+async def test_verify_mfa(async_client):
+    verify_payload = {
+        "mfa_token": "mock_mfa",
+        "mfa_code": "123456",
+        "username": "johndoe",
+    }
+    mock_auth_service = AsyncMock()
+    mock_auth_service.verify_mfa.return_value = (
+        VerifyMFAResponse(access_token="mock_access_token"),
+        {"key": "refresh_token", "value": "some_refresh_token", "httponly": True},
+    )
+
+    # Patch request.state.__getattr__ to return auth_service
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_auth_service):
+        response = await async_client.post("/api/v1/auth/verify-mfa", data=verify_payload)
+
+    response_json = response.json()
+
+    # Assertions
+    assert response.status_code == status.HTTP_200_OK
+    assert response_json["status_code"] == status.HTTP_200_OK
+    assert response_json["message"] == "Successfully signed in and verified MFA"
+    assert response_json["data"]["access_token"] == "mock_access_token"
+
+    # Verify mock was called with correct parameters
+    assert response.headers["set-cookie"] == "refresh_token=some_refresh_token; HttpOnly; Path=/; SameSite=lax"

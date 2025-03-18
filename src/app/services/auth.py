@@ -152,7 +152,7 @@ class AuthService:
         mfa_code: str,
         username: str,
         connection: AsyncConnection,
-    ) -> bool:
+    ) -> VerifyMFAResponse:
         user: UserMembershipQueryReponse | None = await self.repo_auth.get_user_by_username(
             username=username,
             connection=connection,

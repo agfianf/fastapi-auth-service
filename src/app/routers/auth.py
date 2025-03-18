@@ -155,7 +155,7 @@ async def verify_mfa(  # noqa: N802
     mfa_code: Annotated[str, Form(...)],
     connection: Annotated[
         AsyncConnection,
-        Depends(get_async_transaction_conn),
+        Depends(get_async_conn),
     ],
 ) -> JsonResponse[VerifyMFAResponse, None]:
     auth_service: AuthService = request.state.auth_service
