@@ -105,3 +105,5 @@ COMMON_SUBSTITUTIONS: dict = {
     "t": "7",
     "b": "8",
 }
+
+KEY_REFRESH_TOKEN: Final = "refresh_token_app"

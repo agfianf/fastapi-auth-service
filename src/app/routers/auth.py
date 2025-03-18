@@ -1,10 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, Request, Response, status
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Cookie, Depends, Form, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from app.depedencies.auth import JWTBearer
 from app.depedencies.database import get_async_conn, get_async_transaction_conn
 from app.depedencies.rate_limiter import (
     critical_limit,
@@ -17,6 +16,7 @@ from app.schemas.users import (
     SignInPayload,
     SignInResponse,
 )
+from app.schemas.users.query import UserMembershipQueryReponse
 from app.services.auth import AuthService
 
 
@@ -34,6 +34,7 @@ router = APIRouter(
 @limiter.limit(critical_limit)
 async def sign_up(
     request: Request,
+    response: Response,
     payload: Annotated[CreateUserPayload, Form()],
     connection: Annotated[
         AsyncConnection,
@@ -46,17 +47,16 @@ async def sign_up(
         payload=payload,
         connection=connection,
     )
-    content = JsonResponse(
+
+    status_code = status.HTTP_201_CREATED
+    response.status_code = status_code
+    return JsonResponse(
         data={
             "qr_code_bs64": qr_code_bs64,
             "user": user_detail,
         },
         message="Success register user",
-        status_code=status.HTTP_201_CREATED,
-    )
-    return JSONResponse(
-        content=jsonable_encoder(content),
-        status_code=status.HTTP_201_CREATED,
+        status_code=status_code,
     )
 
 
@@ -88,13 +88,54 @@ async def sign_in(
     )
     status_code = status.HTTP_200_OK if signin_response.mfa_required is False else status.HTTP_202_ACCEPTED
 
-    content = JsonResponse(
+    response.status_code = status_code
+    return JsonResponse(
         data=signin_response,
         message=msg,
         status_code=status_code,
     )
 
-    return JSONResponse(
-        content=jsonable_encoder(content),
-        status_code=status_code,
+
+@router.delete("/sign-out", response_model=JsonResponse[dict[str, bool], None])
+@limiter.limit(critical_limit)
+async def sign_out(
+    request: Request,
+    response: Response,
+    jwt_data: Annotated[tuple[UserMembershipQueryReponse, str], Depends(JWTBearer())],
+    refresh_token_app: str = Cookie(...),
+) -> JsonResponse[dict[str, bool], None]:
+    """Sign out user and revoke tokens.
+
+    Parameters
+    ----------
+    request : Request
+        The FastAPI request object
+    response : Response
+        The FastAPI response object
+    jwt_data : tuple[UserMembershipQueryReponse, str]
+        A tuple containing user membership data and the access token
+    refresh_token_app : str
+        The refresh token from cookies
+
+    Returns
+    -------
+    JsonResponse
+        Response confirming logout with cookie cleanup
+
+    """
+    auth_service: AuthService = request.state.auth_service
+
+    _, access_token = jwt_data
+    is_revoked, delete_cookies = await auth_service.sign_out(
+        access_token=access_token,
+        refresh_token_app=refresh_token_app,
+    )
+
+    response.delete_cookie(**delete_cookies)
+    response.status_code = status.HTTP_200_OK
+
+    return JsonResponse(
+        data=is_revoked,
+        message="Successfully signed out",
+        status_code=status.HTTP_200_OK,
     )

@@ -3,7 +3,7 @@ import time
 
 from datetime import datetime, timedelta
 
-from app.config import settings
+from app.config import KEY_REFRESH_TOKEN, settings
 from app.helpers.auth import create_access_token, create_refresh_token
 from app.integrations.redis import RedisHelper
 
@@ -33,7 +33,7 @@ def generate_refresh_cookies(
     expire_time = datetime.now(tz=dt.UTC) + timedelta(minutes=expire_minutes)
 
     return {
-        "key": "refresh_token_app",
+        "key": KEY_REFRESH_TOKEN,
         "value": refresh_token,
         "path": "/",
         "httponly": True,
@@ -59,7 +59,7 @@ def generate_delete_refresh_cookies(is_https: bool = False) -> dict:
 
     """
     return {
-        "key": "refresh_token_app",
+        "key": KEY_REFRESH_TOKEN,
         "path": "/",
         "httponly": True,
         "samesite": "none" if is_https else "lax",
@@ -93,13 +93,14 @@ def generate_jwt_tokens(
     expire_minutes_access: int = settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES,
     expire_minutes_refresh: int = settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES,
 ) -> tuple[str, dict]:
+    timenow = time.time()
     jwt_access_data = {
         **user_data,
-        "expire_time": time.time() + (60 * expire_minutes_access),
+        "expire_time": timenow + (60 * expire_minutes_access),
     }
     jwt_refresh_data = {
         **user_data,
-        "expire_time": time.time() + (60 * expire_minutes_refresh),
+        "expire_time": timenow + (60 * expire_minutes_refresh),
     }
 
     access_token = create_access_token(data=jwt_access_data)

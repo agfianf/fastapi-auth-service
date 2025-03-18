@@ -21,6 +21,7 @@ services:
       - ./src/tests:/code/src/tests
       - ./src/migrations:/code/src/migrations
       - ./src/alembic.ini:/code/src/alembic.ini
+      - ./pyproject.toml:/code/pyproject.toml
     restart: unless-stopped
     networks:
       - auth-network

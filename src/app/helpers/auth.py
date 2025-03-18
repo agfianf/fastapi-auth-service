@@ -1,5 +1,7 @@
 import time
 
+from typing import Literal
+
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
@@ -41,18 +43,20 @@ def create_refresh_token(data: dict) -> str:
 
 
 ## Decode JWT
-def decode_jwt(token: str) -> dict | None:
+def decode_jwt(token: str, type_jwt: Literal["access", "refresh"] = "access") -> dict | None:
     try:
+        key_secret = settings.AUTH_SECRET_ACCESS if type_jwt == "access" else settings.AUTH_SECRET_REFRESH
+        algorithm = settings.AUTH_ALGORITHM_ACCESS if type_jwt == "access" else settings.AUTH_ALGORTIHM_REFRESH
         return jwt.decode(
             token=token,
-            key=settings.AUTH_SECRET_ACCESS,
-            algorithms=[settings.AUTH_ALGORITHM_ACCESS],
+            key=key_secret,
+            algorithms=[algorithm],
         )
     except Exception as err:
         raise InvalidTokenException() from err
 
 
-def decode_jwt_verification(token: str) -> dict | None:
+def decode_access_jwt(token: str) -> dict | None:
     try:
         decoded_token = decode_jwt(token=token)
         exp_time = decoded_token.get("expire_time", None)
@@ -63,7 +67,7 @@ def decode_jwt_verification(token: str) -> dict | None:
 
 def decode_refresh_jwt(token: str) -> dict:
     try:
-        decoded_token = decode_jwt(token=token)
+        decoded_token = decode_jwt(token=token, type_jwt="refresh")
         exp_time = decoded_token.get("expire_time", None)
         return decoded_token if exp_time >= time.time() else None
     except Exception:
