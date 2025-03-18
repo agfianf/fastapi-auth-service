@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from app.exceptions.auth import AlreadySignedOutException, RefreshTokenNotFoundException
 from app.helpers.auth import decode_access_jwt, decode_refresh_jwt
 from app.helpers.generator_jwt import generate_delete_refresh_cookies, generate_jwt_tokens, generate_temporary_mfa_token
-from app.helpers.user_validator import verify_user_password, verify_user_status
+from app.helpers.user_validator import verify_mfa_credentials, verify_user_password, verify_user_status
 from app.integrations.mfa import TwoFactorAuth
 from app.integrations.redis import RedisHelper
 from app.repositories.auth import AuthAsyncRepositories
@@ -15,9 +15,10 @@ from app.schemas.users import (
     CreateUserQuery,
     CreateUserQueryResponse,
     SignInPayload,
+    SignInResponse,
     UserMembershipQueryReponse,
+    VerifyMFAResponse,
 )
-from app.schemas.users.response import SignInResponse
 
 
 class AuthService:
@@ -144,3 +145,31 @@ class AuthService:
             "access_token_revoked": True,
             "refresh_token_revoked": True,
         }, delete_cookie
+
+    async def verify_mfa(
+        self,
+        mfa_token: str,
+        mfa_code: str,
+        username: str,
+        connection: AsyncConnection,
+    ) -> VerifyMFAResponse:
+        user: UserMembershipQueryReponse | None = await self.repo_auth.get_user_by_username(
+            username=username,
+            connection=connection,
+        )
+
+        verify_user_status(user=user)
+        verify_mfa_credentials(
+            redis=self.redis,
+            mfa_token=mfa_token,
+            mfa_code=mfa_code,
+            user=user,
+        )
+
+        access_token, cookies = generate_jwt_tokens(
+            user_data=user.transform_jwt(),
+            expire_minutes_access=15,
+            expire_minutes_refresh=60 * 24,
+        )
+
+        return VerifyMFAResponse(access_token=access_token), cookies

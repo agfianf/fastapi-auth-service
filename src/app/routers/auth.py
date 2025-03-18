@@ -15,8 +15,9 @@ from app.schemas.users import (
     CreateUserResponse,
     SignInPayload,
     SignInResponse,
+    UserMembershipQueryReponse,
+    VerifyMFAResponse,
 )
-from app.schemas.users.query import UserMembershipQueryReponse
 from app.services.auth import AuthService
 
 
@@ -137,5 +138,35 @@ async def sign_out(
     return JsonResponse(
         data=is_revoked,
         message="Successfully signed out",
+        status_code=status.HTTP_200_OK,
+    )
+
+
+@router.post(
+    "/verify-mfa",
+    response_model=JsonResponse[VerifyMFAResponse, None],
+)
+@limiter.limit(critical_limit)
+async def verify_mfa(  # noqa: N802
+    request: Request,
+    response: Response,
+    username: Annotated[str, Form(...)],
+    mfa_token: Annotated[str, Form(...)],
+    mfa_code: Annotated[str, Form(...)],
+    connection: Annotated[AsyncConnection, Depends(get_async_conn)],
+) -> JsonResponse[VerifyMFAResponse, None]:
+    auth_service: AuthService = request.state.auth_service
+    access_token, cookies_refresh = await auth_service.verify_mfa(
+        mfa_token=mfa_token,
+        mfa_code=mfa_code,
+        username=username,
+        connection=connection,
+    )
+
+    response.set_cookie(**cookies_refresh)
+    response.status_code = status.HTTP_200_OK
+    return JsonResponse(
+        data=access_token,
+        message="Successfully signed in and verified MFA",
         status_code=status.HTTP_200_OK,
     )
