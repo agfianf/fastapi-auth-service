@@ -5,10 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.depedencies.auth import JWTBearer
 from app.depedencies.database import get_async_conn
-from app.depedencies.rate_limiter import (
-    default_limit,
-    limiter,
-)
+from app.depedencies.rate_limiter import default_limit, limiter
 from app.helpers.response_api import JsonResponse, MetaResponse
 from app.schemas.users import UserMembershipQueryReponse
 from app.schemas.users.admin.payload import GetUsersPayload
