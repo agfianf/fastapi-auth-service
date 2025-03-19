@@ -25,8 +25,8 @@ class AdminStatement:
         if p.is_active is not None:
             filters.append(users_table.c.is_active == p.is_active)
 
-        if p.role_name:
-            filters.append(roles_table.c.name == p.role_name)
+        if p.roles:
+            filters.append(roles_table.c.name.in_(p.roles))
 
         if p.is_deleted is not None:
             filters.append(
@@ -37,6 +37,7 @@ class AdminStatement:
             # hide superadmin from admin
             filters.append(users_table.c.role_id != 1)
 
+        service_roles = roles_table.alias("service_roles")
         columns_select = [
             users_table.c.uuid,
             users_table.c.username,
@@ -53,13 +54,13 @@ class AdminStatement:
             users_table.c.created_at,
             users_table.c.updated_at,
             users_table.c.deleted_at,
-            roles_table.c.name.label("role_name"),
+            roles_table.c.name.label("role"),
             services_table.c.uuid.label("service_uuid"),
             services_table.c.name.label("service_name"),
             services_table.c.description.label("service_description"),
             services_table.c.is_active.label("service_is_active"),
             service_memberships_table.c.is_active.label("member_is_active"),
-            roles_table.c.name.label("service_role_name"),
+            service_roles.c.name.label("service_role_name"),
         ]
 
         chain = (
@@ -73,8 +74,8 @@ class AdminStatement:
                 service_memberships_table.c.service_uuid == services_table.c.uuid,
             )  # Join to services
             .outerjoin(
-                roles_table.alias("service_roles"),
-                service_memberships_table.c.role_id == roles_table.alias("service_roles").c.id,
+                service_roles,
+                service_memberships_table.c.role_id == service_roles.c.id,
             )
         )
 

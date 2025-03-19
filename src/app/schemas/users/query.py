@@ -62,10 +62,10 @@ class UserMembership(BaseModel):
 class UserMembershipQueryReponse(UserBase):
     """Create User Membership Query."""
 
+    role: str | None = Field(None, description="Name of the role")
     role_id: int | None = Field(None, description="ID of the role", exclude=True)
     password_hash: str | None = Field(None, exclude=True)
     mfa_secret: str | None = Field(None, exclude=True)
-    role_name: str | None = Field(None, description="Name of the role")
     services: list[UserMembership] = Field(
         ...,
         description="List of services for the user membership",

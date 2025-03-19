@@ -17,6 +17,8 @@ class AuthStatements:
     @staticmethod
     def get_user_by_username(username: str) -> select:
         # Join with roles, service_memberships, services, and roles for service memberships
+        service_roles = roles_table.alias("service_roles")
+
         stmt = (
             select(
                 users_table.c.uuid,
@@ -34,13 +36,13 @@ class AuthStatements:
                 users_table.c.created_at,
                 users_table.c.updated_at,
                 users_table.c.deleted_at,
-                roles_table.c.name.label("role_name"),  # Main role name from users.role_id
+                roles_table.c.name.label("role"),  # Main role name from users.role_id
                 services_table.c.uuid.label("service_uuid"),
                 services_table.c.name.label("service_name"),
                 services_table.c.description.label("service_description"),
                 services_table.c.is_active.label("service_is_active"),
                 service_memberships_table.c.is_active.label("member_is_active"),
-                roles_table.c.name.label("service_role_name"),  # Role name from service_memberships
+                service_roles.c.name.label("service_role_name"),  # Role name from service_memberships
             )
             .select_from(users_table)
             .outerjoin(roles_table, users_table.c.role_id == roles_table.c.id)  # Main role
@@ -53,8 +55,8 @@ class AuthStatements:
                 service_memberships_table.c.service_uuid == services_table.c.uuid,
             )  # Join to services
             .outerjoin(
-                roles_table.alias("service_roles"),
-                service_memberships_table.c.role_id == roles_table.alias("service_roles").c.id,
+                service_roles,
+                service_memberships_table.c.role_id == service_roles.c.id,
             )  # Join to roles for service memberships
             .where(
                 and_(
@@ -113,4 +115,6 @@ class AuthAsyncRepositories:
             **user_data,
             "services": services,
         }
+
+        print(user_response)
         return UserMembershipQueryReponse.model_validate(user_response)

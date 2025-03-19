@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from app.depedencies.auth import JWTBearer
+from app.depedencies.auth import PERMISSION_ADMIN
 from app.depedencies.database import get_async_conn
 from app.depedencies.rate_limiter import default_limit, limiter
 from app.helpers.response_api import JsonResponse, MetaResponse
@@ -28,7 +28,7 @@ async def get_list_users(
     request: Request,
     response: Response,
     payload: Annotated[GetUsersPayload, Query()],
-    jwt_data: Annotated[tuple[UserMembershipQueryReponse, str], Depends(JWTBearer())],
+    jwt_data: Annotated[tuple[UserMembershipQueryReponse, str], PERMISSION_ADMIN],
     connection: Annotated[AsyncConnection, Depends(get_async_conn)],
 ) -> JsonResponse[list[UserMembershipQueryReponse], MetaResponse]:
     """List all users."""

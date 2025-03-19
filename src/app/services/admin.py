@@ -25,7 +25,7 @@ class AdminService:
     ) -> tuple[list[UserMembershipQueryReponse], MetaResponse]:
         """List all users."""
         users, metaresponse = await self.repo_admin.get_list_users(
-            role=current_user.role_name,
+            role=current_user.role,
             payload=payload,
             connection=connection,
         )

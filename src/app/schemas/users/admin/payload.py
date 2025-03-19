@@ -17,7 +17,7 @@ class GetUsersPayload(BaseModel):
     # Filter
     username: str | None = Field(default=None, description="Filter by username")
     email: str | None = Field(default=None, description="Filter by email")
-    role_name: list[str] | None = Field(default=None, description="Filter by role")
+    roles: list[str] | None = Field(default=None, description="Filter by role")
     is_active: bool | None = Field(default=None, description="Filter by active status")
     is_deleted: bool | None = Field(default=None, description="Filter by deleted status")
 

@@ -1,8 +1,11 @@
-from fastapi import Request
+from typing import Annotated
+
+from fastapi import Depends, Request
 from fastapi.security import HTTPBearer
 
 from app.exceptions.auth import (
     InactiveUserException,
+    InsufficientPermissionsException,
     InvalidCredentialsHeaderException,
     InvalidCredentialsSchemeException,
     InvalidTokenException,
@@ -10,6 +13,7 @@ from app.exceptions.auth import (
 )
 from app.helpers.auth import decode_access_jwt
 from app.integrations.redis import RedisHelper
+from app.schemas.roles.base import UserRole
 from app.schemas.users import UserMembershipQueryReponse
 
 
@@ -50,3 +54,26 @@ class JWTBearer(HTTPBearer):
             raise InactiveUserException()
 
         return user_profile, credentials.credentials
+
+
+class RoleChecker:
+    def __init__(self, required_role: list[str]):
+        self.required_role = required_role
+
+    async def __call__(
+        self,
+        jwt_data: Annotated[tuple[UserMembershipQueryReponse, str], Depends(JWTBearer())],
+    ) -> tuple[UserMembershipQueryReponse, str]:
+        user_profile, jwt = jwt_data
+
+        if user_profile.role not in self.required_role:
+            raise InsufficientPermissionsException()
+
+        return user_profile, jwt
+
+
+PERMISSION_SUPERADMIN = Depends(RoleChecker([UserRole.superadmin]))
+PERMISSION_ADMIN = Depends(RoleChecker([UserRole.superadmin, UserRole.admin]))
+PERMISSION_STAFF = Depends(RoleChecker([UserRole.staff]))
+PERMISSION_MEMBER = Depends(RoleChecker([UserRole.member]))
+PERMISSION_GUEST = Depends(RoleChecker([UserRole.guest]))
