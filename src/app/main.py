@@ -11,8 +11,11 @@ from fastapi.responses import RedirectResponse
 
 from app.config import settings
 from app.integrations.redis import RedisHelper
+from app.repositories.admin import AdminAsyncRepositories
 from app.repositories.auth import AuthAsyncRepositories
+from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
+from app.services.admin import AdminService
 from app.services.auth import AuthService
 
 
@@ -26,9 +29,15 @@ async def lifespan(app: FastAPI):  # noqa
         repo_auth=AuthAsyncRepositories,
         redis=redis,
     )
+
+    admin_service = AdminService(
+        repo_admin=AdminAsyncRepositories,
+        redis=redis,
+    )
     yield {
         "redis_helper": redis,
         "auth_service": auth_service,
+        "admin_service": admin_service,
     }
     print("Cleaning up resources...")
 
@@ -54,3 +63,4 @@ async def root():  # noqa: ANN201
 
 
 app.include_router(auth_router)
+app.include_router(admin_router)

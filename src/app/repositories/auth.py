@@ -90,7 +90,6 @@ class AuthAsyncRepositories:
         stmt = AuthStatements.get_user_by_username(username=username)
         result = await connection.execute(stmt)
         rows = result.mappings().all()
-        print(rows)
 
         if not rows:
             return None

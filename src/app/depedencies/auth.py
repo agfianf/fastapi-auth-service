@@ -44,7 +44,6 @@ class JWTBearer(HTTPBearer):
         if is_creds_revoked:
             raise TokenRevokedException()
 
-        print(user_profile)
         user_profile = UserMembershipQueryReponse(**user_profile)
 
         if not user_profile.is_active:
