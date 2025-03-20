@@ -66,8 +66,8 @@ class AdminStatement:
         return stmt
 
     @staticmethod
-    def get_list_users(p: GetUsersPayload, role: str) -> tuple[Select, Select]:
-        """Fetch all users."""
+    def get_list_users_base(p: GetUsersPayload, role: str) -> tuple[Select, Select]:
+        """Generate query untuk mendapatkan data user dasar."""
         filters = []
 
         if p.email:
@@ -91,7 +91,6 @@ class AdminStatement:
             # hide superadmin from admin
             filters.append(users_table.c.role_id != 1)
 
-        service_roles = roles_table.alias("service_roles")
         columns_select = [
             users_table.c.uuid,
             users_table.c.username,
@@ -109,29 +108,9 @@ class AdminStatement:
             users_table.c.updated_at,
             users_table.c.deleted_at,
             roles_table.c.name.label("role"),
-            services_table.c.uuid.label("service_uuid"),
-            services_table.c.name.label("service_name"),
-            services_table.c.description.label("service_description"),
-            services_table.c.is_active.label("service_is_active"),
-            service_memberships_table.c.is_active.label("member_is_active"),
-            service_roles.c.name.label("service_role_name"),
         ]
 
-        chain = (
-            users_table.outerjoin(roles_table, users_table.c.role_id == roles_table.c.id)
-            .outerjoin(
-                service_memberships_table,
-                users_table.c.uuid == service_memberships_table.c.user_uuid,
-            )  # Join to service memberships
-            .outerjoin(
-                services_table,
-                service_memberships_table.c.service_uuid == services_table.c.uuid,
-            )  # Join to services
-            .outerjoin(
-                service_roles,
-                service_memberships_table.c.role_id == service_roles.c.id,
-            )
-        )
+        chain = users_table.outerjoin(roles_table, users_table.c.role_id == roles_table.c.id)
 
         base_stmt = select(*columns_select).select_from(chain)
 
@@ -164,6 +143,33 @@ class AdminStatement:
         count_query = select(func.count()).select_from(chain).where(and_(*filters))
 
         return stmt, count_query
+
+    @staticmethod
+    def get_user_services(user_uuids: list[UUID]) -> Select:
+        """Generate query untuk mendapatkan data service untuk user tertentu."""
+        service_roles = roles_table.alias("service_roles")
+
+        columns_select = [
+            service_memberships_table.c.user_uuid,
+            services_table.c.uuid.label("service_uuid"),
+            services_table.c.name.label("service_name"),
+            services_table.c.description.label("service_description"),
+            services_table.c.is_active.label("service_is_active"),
+            service_memberships_table.c.is_active.label("member_is_active"),
+            service_roles.c.name.label("service_role_name"),
+        ]
+
+        chain = service_memberships_table.outerjoin(
+            services_table,
+            service_memberships_table.c.service_uuid == services_table.c.uuid,
+        ).outerjoin(
+            service_roles,
+            service_memberships_table.c.role_id == service_roles.c.id,
+        )
+
+        stmt = select(*columns_select).select_from(chain).where(service_memberships_table.c.user_uuid.in_(user_uuids))
+
+        return stmt
 
 
 class AdminAsyncRepositories:
@@ -219,44 +225,53 @@ class AdminAsyncRepositories:
         payload: GetUsersPayload,
         connection: AsyncConnection,
     ) -> tuple[list[UserMembershipQueryReponse] | None, MetaResponse | None]:
-        stmt_data, stmt_count = AdminStatement.get_list_users(p=payload, role=role)
+        # 1. get data user dasar
+        user_stmt, count_stmt = AdminStatement.get_list_users_base(p=payload, role=role)
 
-        # Process data query
-        result = await connection.execute(stmt_data)
-        rows_raw = result.mappings().all()
+        # Eksekusi query user
+        user_result = await connection.execute(user_stmt)
+        user_rows = user_result.mappings().all()
 
-        if not rows_raw:
+        if not user_rows:
             return None, None
 
-        # Group services by user UUID
-        user_services: dict[UUID, list[dict]] = {}
-        for row in rows_raw:
-            user_uuid = row["uuid"]
+        # 2. get UUID semua user untuk query service
+        user_uuids = [row["uuid"] for row in user_rows]
+
+        # 3. Query untuk mendapatkan service untuk user-user tersebut
+        service_stmt = AdminStatement.get_user_services(user_uuids)
+
+        # Eksekusi query service
+        service_result = await connection.execute(service_stmt)
+        service_rows = service_result.mappings().all()
+
+        # 4. group service berdasarkan user_uuid
+        user_services = {}
+        for row in service_rows:
+            user_uuid = row["user_uuid"]
             if user_uuid not in user_services:
                 user_services[user_uuid] = []
 
-            service_info = AdminAsyncRepositories._extract_service_info(row)
-            if service_info:
-                user_services[user_uuid].append(service_info)
+            service_info = {
+                "uuid": row["service_uuid"],
+                "name": row["service_name"],
+                "description": row["service_description"],
+                "role": row["service_role_name"],
+                "service_is_active": row["service_is_active"],
+                "member_is_active": row["member_is_active"],
+            }
+            user_services[user_uuid].append(service_info)
 
-        # Create unique user records with their services
-        unique_users = []
-        processed_uuids = set()
-        for row in rows_raw:
-            user_uuid = row["uuid"]
-            if user_uuid in processed_uuids:
-                continue
-
-            user_data = dict(row)
+        # 5. Merge user dengan service-nya
+        users = []
+        for user_row in user_rows:
+            user_uuid = user_row["uuid"]
+            user_data = dict(user_row)
             user_data["services"] = user_services.get(user_uuid, [])
-            unique_users.append(user_data)
-            processed_uuids.add(user_uuid)
+            users.append(UserMembershipQueryReponse(**user_data))
 
-        # Convert to response objects
-        users = [UserMembershipQueryReponse(**user_data) for user_data in unique_users]
-
-        # Process meta response
-        total_items_raw = await connection.execute(stmt_count)
+        # 6. Hitung total untuk meta
+        total_items_raw = await connection.execute(count_stmt)
         total_items = total_items_raw.scalar_one()
         total_pages = (total_items + payload.limit - 1) // payload.limit
 
