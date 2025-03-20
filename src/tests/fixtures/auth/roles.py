@@ -3,7 +3,7 @@ import time
 
 import pytest_asyncio
 
-from app.depedencies.auth import role_admin, role_superadmin
+from app.depedencies.auth import role_admin
 from app.helpers.generator import generate_uuid
 from app.helpers.generator_jwt import create_access_token
 from app.main import app
@@ -74,14 +74,14 @@ def get_data_user_superadmin_valid() -> tuple[UserMembershipQueryReponse, str]:
 
 # ---override authenticator----
 @pytest_asyncio.fixture
-async def override_role_superadmin():
+async def override_role_superadmin_in_admin():
     """Override role checker for admin role wo mfa."""
     data = get_data_user_superadmin_valid()
-    app.dependency_overrides[role_superadmin] = lambda: data
+    app.dependency_overrides[role_admin] = lambda: data
 
     yield data
     # Cleanup after test
-    app.dependency_overrides.pop(role_superadmin, None)
+    app.dependency_overrides.pop(role_admin, None)
 
 
 @pytest_asyncio.fixture

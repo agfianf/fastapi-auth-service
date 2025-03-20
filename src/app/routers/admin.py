@@ -1,15 +1,15 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Form, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils.compat import UUID
 
 from app.depedencies.auth import PERMISSION_ADMIN
-from app.depedencies.database import get_async_conn
+from app.depedencies.database import get_async_conn, get_async_transaction_conn
 from app.depedencies.rate_limiter import default_limit, limiter
 from app.helpers.response_api import JsonResponse, MetaResponse
 from app.schemas.users import UserMembershipQueryReponse
-from app.schemas.users.admin.payload import GetUsersPayload
+from app.schemas.users.admin.payload import GetUsersPayload, UpdateUserByAdminPayload
 from app.services.admin import AdminService
 
 
@@ -76,5 +76,43 @@ async def get_user_details(
     return JsonResponse(
         data=user,
         message="Successfully get user details",
+        status_code=status_code,
+    )
+
+
+@router.put(
+    "/users/{user_uuid}",
+    response_model=JsonResponse[None, None],
+    description="Update user details.",
+)
+@limiter.limit(default_limit)
+async def update_user_details(
+    request: Request,
+    response: Response,
+    user_uuid: UUID,
+    payload: Annotated[UpdateUserByAdminPayload, Form()],
+    jwt_data: Annotated[tuple[UserMembershipQueryReponse, str], PERMISSION_ADMIN],
+    connection: Annotated[AsyncConnection, Depends(get_async_transaction_conn)],
+) -> JsonResponse[None, None]:
+    """Update targeted user details.
+
+    - ✏️ **Editable fields:** `role`, `active` and _should be **soon**_
+    `company_id / mills_id`.<br>
+    - 🚫 **Non-editable fields:** password, name, email, and username.
+    """
+    admin_service: AdminService = request.state.admin_service
+
+    await admin_service.update_user_details(
+        current_user=jwt_data[0],
+        user_uuid=user_uuid,
+        payload=payload,
+        connection=connection,
+    )
+
+    status_code = status.HTTP_204_NO_CONTENT
+    response.status_code = status_code
+    return JsonResponse(
+        data=None,
+        message="Successfully updated user details",
         status_code=status_code,
     )
