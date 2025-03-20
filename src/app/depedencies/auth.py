@@ -67,8 +67,8 @@ jwt_bearer = get_jwt_bearer_instance()
 
 
 class RoleChecker:
-    def __init__(self, required_role: list[str]):
-        self.required_role = required_role
+    def __init__(self, required_roles: list[str]):
+        self.required_role = required_roles
 
     async def __call__(
         self,
