@@ -109,15 +109,15 @@ class AdminService:
             connection=connection,
         )
 
+        if user is None:
+            raise NoUsersFoundException()
+
         if current_user.role == "superadmin" and user.role == "superadmin":
             raise SuperadminCannotUpdateSuperadminException()
         if current_user.role == "admin" and user.role == "superadmin":
             raise AdminCannotUpdateSuperAdminException()
         if current_user.role == "admin" and user.role == "admin":
             raise AdminCannotUpdateAdminException()
-
-        if user is None:
-            raise NoUsersFoundException()
 
         deleted_user = await self.repo_admin.soft_delete_user(
             role_admin=current_user.role,
