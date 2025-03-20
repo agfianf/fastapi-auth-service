@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class SortOrder(StrEnum):
@@ -26,3 +26,11 @@ class GetUsersPayload(BaseModel):
     limit: int = Field(default=10, ge=1, le=100, description="Number of items per page (max = 100)")
     sort_by: SortByField = Field(default=SortByField.created_at, description="Field to sort results by")
     sort_order: SortOrder = Field(default=SortOrder.DESC, description="Sort order (asc/desc)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def set_empty_fields_to_none(cls, values: dict[str, str]) -> dict[str, str]:
+        for key, val in values.items():
+            if val == "" or val == [""]:
+                values[key] = None
+        return values

@@ -1,4 +1,3 @@
-# conftest.py
 from unittest.mock import AsyncMock
 
 import pytest_asyncio
@@ -7,6 +6,9 @@ from httpx import ASGITransport, AsyncClient
 
 from app.depedencies.database import get_async_conn, get_async_transaction_conn
 from app.main import app
+
+# Fixtures
+from tests.fixtures.auth.roles import override_role_admin
 
 
 @pytest_asyncio.fixture
