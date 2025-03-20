@@ -4,12 +4,12 @@ from uuid_utils.compat import UUID
 from app.schemas._default_base import BaseAudit
 
 
-class ServicesBase(BaseAudit):
-    uuid: UUID = Field(..., description="UUIDv7 of the service")
+class ServiceBase(BaseAudit):
+    uuid: UUID = Field(..., description="UUID of the service")
     name: str = Field(..., description="Name of the service")
     location: str | None = Field(None, description="Location of the service")
     description: str | None = Field(None, description="Description of the service")
-    is_active: bool = Field(False, description="Is the service active")
+    is_active: bool = Field(..., description="Whether the service is active")
 
 
 class ServiceMembershipBase(BaseAudit):

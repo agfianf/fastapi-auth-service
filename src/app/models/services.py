@@ -16,7 +16,7 @@ services_table = Table(
     Column("name", VARCHAR(225), nullable=False, unique=True),
     Column("location", VARCHAR(255), nullable=True),
     Column("description", VARCHAR(255), nullable=True),
-    Column("is_active", VARCHAR(225), nullable=False, server_default="false"),
+    Column("is_active", Boolean, nullable=False, server_default="false"),
     *default_base_audit,
 )
 
