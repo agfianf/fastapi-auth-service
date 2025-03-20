@@ -86,7 +86,6 @@ class RoleService:
     ) -> RoleBase:
         """Update an existing role."""
         # Check if role exists
-        await self.fetch_role_by_id(role_id=role_id, connection=connection)
 
         updated_role = await self.repo_roles.update_role(
             connection=connection,
