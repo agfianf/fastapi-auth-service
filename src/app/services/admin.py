@@ -86,6 +86,7 @@ class AdminService:
 
         updated_user = await self.repo_admin.update_user_details(
             role_admin=current_user.role,
+            executed_by=current_user.email,
             user_uuid=user_uuid,
             payload=payload,
             connection=connection,
@@ -94,3 +95,38 @@ class AdminService:
         if updated_user is False:
             raise FailedUpdateUserException()
         return updated_user
+
+    async def delete_user(
+        self,
+        current_user: UserMembershipQueryReponse,
+        user_uuid: UUID,
+        connection: AsyncConnection,
+    ) -> bool:
+        """Delete user."""
+        user = await self.repo_admin.get_user_details(
+            role=current_user.role,
+            user_uuid=user_uuid,
+            connection=connection,
+        )
+
+        if current_user.role == "superadmin" and user.role == "superadmin":
+            raise SuperadminCannotUpdateSuperadminException()
+        if current_user.role == "admin" and user.role == "superadmin":
+            raise AdminCannotUpdateSuperAdminException()
+        if current_user.role == "admin" and user.role == "admin":
+            raise AdminCannotUpdateAdminException()
+
+        if user is None:
+            raise NoUsersFoundException()
+
+        deleted_user = await self.repo_admin.soft_delete_user(
+            role_admin=current_user.role,
+            executed_by=current_user.email,
+            user_uuid=user_uuid,
+            connection=connection,
+        )
+
+        if deleted_user is False:
+            raise FailedUpdateUserException()
+
+        return deleted_user
