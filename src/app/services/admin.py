@@ -1,12 +1,18 @@
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils.compat import UUID
 
-from app.exceptions.admin import NoUsersFoundException
+from app.exceptions.admin import (
+    AdminCannotUpdateAdminException,
+    AdminCannotUpdateSuperAdminException,
+    FailedUpdateUserException,
+    NoUsersFoundException,
+    SuperadminCannotUpdateSuperadminException,
+)
 from app.helpers.response_api import MetaResponse
 from app.integrations.redis import RedisHelper
 from app.repositories.admin import AdminAsyncRepositories
 from app.schemas.users import UserMembershipQueryReponse
-from app.schemas.users.admin.payload import GetUsersPayload
+from app.schemas.users.admin.payload import GetUsersPayload, UpdateUserByAdminPayload
 
 
 class AdminService:
@@ -51,3 +57,40 @@ class AdminService:
         if user is None:
             raise NoUsersFoundException()
         return user
+
+    async def update_user_details(
+        self,
+        current_user: UserMembershipQueryReponse,
+        user_uuid: UUID,
+        payload: UpdateUserByAdminPayload,
+        connection: AsyncConnection,
+    ) -> UserMembershipQueryReponse:
+        """Update user details."""
+        user = await self.repo_admin.get_user_details(
+            role=current_user.role,
+            user_uuid=user_uuid,
+            connection=connection,
+        )
+
+        if current_user.role == "superadmin" and payload.role == "superadmin":
+            raise SuperadminCannotUpdateSuperadminException()
+
+        if current_user.role == "admin" and payload.role == "superadmin":
+            raise AdminCannotUpdateSuperAdminException()
+
+        if current_user.role == "admin" and payload.role == "admin":
+            raise AdminCannotUpdateAdminException()
+
+        if user is None:
+            raise NoUsersFoundException()
+
+        updated_user = await self.repo_admin.update_user_details(
+            role_admin=current_user.role,
+            user_uuid=user_uuid,
+            payload=payload,
+            connection=connection,
+        )
+
+        if updated_user is False:
+            raise FailedUpdateUserException()
+        return updated_user

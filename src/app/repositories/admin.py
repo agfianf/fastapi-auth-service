@@ -1,4 +1,4 @@
-from sqlalchemy import Select, and_, func, select
+from sqlalchemy import Select, Update, and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils.compat import UUID
 
@@ -7,7 +7,7 @@ from app.helpers.response_api import MetaResponse
 from app.models.roles import roles_table
 from app.models.services import service_memberships_table, services_table
 from app.models.users import users_table
-from app.schemas.users.admin.payload import GetUsersPayload, SortOrder
+from app.schemas.users.admin.payload import GetUsersPayload, SortOrder, UpdateUserByAdminPayload
 from app.schemas.users.query import UserMembershipQueryReponse
 
 
@@ -171,6 +171,37 @@ class AdminStatement:
 
         return stmt
 
+    @staticmethod
+    def get_role_id(role_name: str) -> Select:
+        """Generate query untuk mendapatkan role_id user."""
+        stmt = select(roles_table.c.id).where(roles_table.c.name == role_name)
+        return stmt
+
+    @staticmethod
+    def update_user_details(
+        role_admin: str,
+        user_uuid: UUID,
+        role_id_user: int | None,
+        is_active: bool | None,
+    ) -> Update:
+        """Generate query untuk update user details."""
+        filters = []
+        if role_admin == "admin":
+            # hide superadmin info from admin
+            filters.append(users_table.c.role_id != 1)
+
+        filters.append(users_table.c.deleted_at.is_(None))
+        filters.append(users_table.c.uuid == user_uuid)
+
+        update_values = {}
+        if role_id_user is not None:
+            update_values["role_id"] = role_id_user
+        if is_active is not None:
+            update_values["is_active"] = is_active
+
+        update_stmt = update(users_table).values(**update_values).where(and_(*filters)).returning(1)
+        return update_stmt
+
 
 class AdminAsyncRepositories:
     @staticmethod
@@ -285,3 +316,28 @@ class AdminAsyncRepositories:
         )
 
         return users, meta
+
+    @staticmethod
+    @query_exceptions_handler
+    async def update_user_details(
+        role_admin: str,
+        user_uuid: UUID,
+        payload: UpdateUserByAdminPayload,
+        connection: AsyncConnection,
+    ) -> UserMembershipQueryReponse | None:
+        # get role_id
+        role_id_user = None
+        if payload.role is not None:
+            role_stmt = AdminStatement.get_role_id(role_name=payload.role)
+            role_result = await connection.execute(role_stmt)
+            role_id_user = role_result.scalar_one_or_none()
+
+        # update user
+        update_stmt = AdminStatement.update_user_details(
+            role_admin=role_admin,
+            user_uuid=user_uuid,
+            role_id_user=role_id_user,
+            is_active=payload.is_active,
+        )
+        result_update = await connection.execute(update_stmt)
+        return result_update.scalar_one_or_none() == 1

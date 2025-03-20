@@ -2,6 +2,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.roles.base import UserRole
+
 
 class SortOrder(StrEnum):
     ASC = "asc"
@@ -34,3 +36,16 @@ class GetUsersPayload(BaseModel):
             if val == "" or val == [""]:
                 values[key] = None
         return values
+
+
+class UpdateUserByAdminPayload(BaseModel):
+    role: UserRole | None = Field(None, examples=[None])
+    is_active: bool | None = Field(None, examples=[None])
+
+    @model_validator(mode="before")
+    @classmethod
+    def preproces_input_data(cls, data: dict) -> dict:  # noqa: ANN102
+        for data_key in data:
+            if data.get(data_key) == "":
+                data[data_key] = None
+        return data
