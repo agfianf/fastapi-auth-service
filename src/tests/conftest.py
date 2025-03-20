@@ -8,7 +8,10 @@ from app.depedencies.database import get_async_conn, get_async_transaction_conn
 from app.main import app
 
 # Fixtures
-from tests.fixtures.auth.roles import override_role_admin
+from tests.fixtures.auth.roles import (
+    override_role_admin,
+    override_role_superadmin,
+)
 
 
 @pytest_asyncio.fixture

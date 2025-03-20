@@ -51,7 +51,7 @@ async def get_list_users(
 
 
 @router.get(
-    "/users/{user_id}",
+    "/users/{user_uuid}",
     response_model=JsonResponse[UserMembershipQueryReponse, None],
     description="Get user details.",
 )

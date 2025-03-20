@@ -232,3 +232,88 @@ async def test_get_list_users_unauthorized(async_client, db_conn):
 
     # Assertions
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_get_user_admin_details_as_admin(async_client, db_conn, override_role_admin):
+    """Test the get_user_admin_details endpoint as an admin user."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock data
+    uuid_user = str(generate_uuid())
+    mock_user = {
+        "uuid": uuid_user,
+        "role": "admin",
+        "username": "testadmin",
+        "firstname": "Test",
+        "midname": "Admin",
+        "lastname": "User",
+        "email": "testadmin@example.com",
+        "phone": "+1234567890",
+        "telegram": "@testadmin",
+        "is_active": True,
+        "mfa_enabled": False,
+        "created_at": "2025-03-17T07:12:39.919356Z",
+        "updated_at": "2025-03-17T07:12:39.919356Z",
+        "services": [
+            {
+                "uuid": str(generate_uuid()),
+                "name": "Service 1",
+                "description": "Test service",
+                "role": "admin",
+                "member_is_active": True,
+                "service_is_active": True,
+            }
+        ],
+    }
+
+    user_detail = UserMembershipQueryReponse.model_validate(mock_user)
+
+    mock_admin_service = AsyncMock()
+    mock_admin_service.fetch_user_details.return_value = user_detail
+
+    # Patch JWT permission and service
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        # Make the request with multiple query parameters
+        response = await async_client.get(
+            f"/api/v1/admin/users/{uuid_user}",
+            headers={"Authorization": f"Bearer {jwt_token}"},
+        )
+    response_json = response.json()
+    response_data = response_json["data"]
+
+    # Assertions
+    assert response.status_code == status.HTTP_200_OK
+
+    assert response_data["uuid"] == uuid_user
+    assert response_data["username"] == "testadmin"
+    assert response_data["role"] == "admin"
+
+
+@pytest.mark.asyncio
+async def test_get_user_superadmin_details_as_admin(async_client, db_conn, override_role_admin):
+    """Test the get_user_superadmin_details endpoint as an admin user.
+
+    This test should be raised because the admin user should not be able to access superadmin details.
+    """
+    user_profile, jwt_token = override_role_admin
+
+    # Mock data
+    uuid_user = str(generate_uuid())
+
+    mock_admin_service = AsyncMock()
+    mock_admin_service.fetch_user_details.side_effect = NoUsersFoundException()
+
+    # Patch JWT permission and service
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        # Make the request with multiple query parameters
+        response = await async_client.get(
+            f"/api/v1/admin/users/{uuid_user}",
+            headers={"Authorization": f"Bearer {jwt_token}"},
+        )
+    response_json = response.json()
+
+    # Assertions
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    #! Note: the current implementation still not standarize error response, so we using `detail`
+    assert response_json["detail"] == "No users found."

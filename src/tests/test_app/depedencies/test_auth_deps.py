@@ -6,14 +6,18 @@ from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
 from uuid_utils.compat import uuid7
 
-from app.depedencies.auth import AUTH_SCHEME, JWTBearer
+from app.depedencies.auth import AUTH_SCHEME, JWTBearer, RoleChecker
 from app.exceptions.auth import (
     InactiveUserException,
+    InsufficientPermissionsException,
     InvalidCredentialsHeaderException,
     InvalidCredentialsSchemeException,
     InvalidTokenException,
     TokenRevokedException,
 )
+from app.helpers.generator import generate_uuid
+from app.schemas.roles.base import UserRole
+from app.schemas.users import UserMembershipQueryReponse
 
 
 @pytest.fixture
@@ -165,3 +169,58 @@ class TestJWTBearer:
             pytest.raises(InactiveUserException),
         ):
             await bearer.__call__(mock_request)
+
+
+class TestRoleChecker:
+    @pytest.fixture
+    def mock_user_profile(self):
+        return UserMembershipQueryReponse(
+            uuid=generate_uuid(),
+            email="test@example.com",
+            username="testuser",
+            firstname="Test",
+            is_active=True,
+            role=UserRole.member,
+            services=[],
+        )
+
+    @pytest.fixture
+    def mock_jwt(self):
+        return "mock.jwt.token"
+
+    @pytest.mark.asyncio
+    async def test_call_with_valid_role(self, mock_user_profile, mock_jwt):
+        # Setup
+        role_checker = RoleChecker([UserRole.member, UserRole.admin])
+        jwt_data = (mock_user_profile, mock_jwt)
+
+        # Execute
+        result_profile, result_jwt = await role_checker(jwt_data)
+
+        # Assert
+        assert result_profile == mock_user_profile
+        assert result_jwt == mock_jwt
+
+    @pytest.mark.asyncio
+    async def test_call_with_invalid_role_raises_exception(self, mock_user_profile, mock_jwt):
+        # Setup
+        role_checker = RoleChecker([UserRole.admin, UserRole.superadmin])
+        jwt_data = (mock_user_profile, mock_jwt)
+
+        # Execute and Assert
+        with pytest.raises(InsufficientPermissionsException):
+            await role_checker(jwt_data)
+
+    @pytest.mark.asyncio
+    async def test_call_with_multiple_allowed_roles(self, mock_user_profile, mock_jwt):
+        # Setup
+        mock_user_profile.role = UserRole.admin
+        role_checker = RoleChecker([UserRole.member, UserRole.admin, UserRole.superadmin])
+        jwt_data = (mock_user_profile, mock_jwt)
+
+        # Execute
+        result_profile, result_jwt = await role_checker(jwt_data)
+
+        # Assert
+        assert result_profile == mock_user_profile
+        assert result_jwt == mock_jwt
