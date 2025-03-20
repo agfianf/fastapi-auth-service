@@ -13,10 +13,13 @@ from app.config import settings
 from app.integrations.redis import RedisHelper
 from app.repositories.admin import AdminAsyncRepositories
 from app.repositories.auth import AuthAsyncRepositories
+from app.repositories.roles import RoleAsyncRepositories
 from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
+from app.routers.roles import router as roles_router
 from app.services.admin import AdminService
 from app.services.auth import AuthService
+from app.services.roles import RoleService
 
 
 @asynccontextmanager
@@ -34,11 +37,20 @@ async def lifespan(app: FastAPI):  # noqa
         repo_admin=AdminAsyncRepositories,
         redis=redis,
     )
+
+    role_repo = RoleAsyncRepositories()
+    role_service = RoleService(
+        repo_roles=role_repo,
+        redis=redis,
+    )
+
     yield {
         "redis_helper": redis,
         "auth_service": auth_service,
         "admin_service": admin_service,
+        "role_service": role_service,
     }
+
     print("Cleaning up resources...")
 
 
@@ -64,3 +76,4 @@ async def root():  # noqa: ANN201
 
 app.include_router(auth_router)
 app.include_router(admin_router)
+app.include_router(roles_router)
