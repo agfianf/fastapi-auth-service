@@ -21,7 +21,7 @@ router = APIRouter(
 @router.get(
     "",
     response_model=JsonResponse[list[UserMembershipQueryReponse], MetaResponse],
-    description="Register a new user with 2FA.",
+    description="List all users with filtering and pagination.",
 )
 @limiter.limit(default_limit)
 async def get_list_users(
