@@ -109,10 +109,41 @@ async def update_user_details(
         connection=connection,
     )
 
-    status_code = status.HTTP_204_NO_CONTENT
+    status_code = status.HTTP_200_OK
     response.status_code = status_code
     return JsonResponse(
         data=None,
         message="Successfully updated user details",
+        status_code=status_code,
+    )
+
+
+@router.delete(
+    "/users/{user_uuid}",
+    response_model=JsonResponse[None, None],
+    description="Delete user.",
+)
+@limiter.limit(default_limit)
+async def delete_user(
+    request: Request,
+    response: Response,
+    user_uuid: UUID,
+    jwt_data: Annotated[tuple[UserMembershipQueryReponse, str], PERMISSION_ADMIN],
+    connection: Annotated[AsyncConnection, Depends(get_async_transaction_conn)],
+) -> JsonResponse[None, None]:
+    """Delete targeted user."""
+    admin_service: AdminService = request.state.admin_service
+
+    await admin_service.delete_user(
+        current_user=jwt_data[0],
+        user_uuid=user_uuid,
+        connection=connection,
+    )
+
+    status_code = status.HTTP_200_OK
+    response.status_code = status_code
+    return JsonResponse(
+        data=None,
+        message="Successfully deleted user",
         status_code=status_code,
     )

@@ -354,7 +354,7 @@ async def test_update_user_details_success(async_client, db_conn_trans, override
         )
 
     # Assertions
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_200_OK
 
     # Verify the service was called with the correct parameters
     mock_admin_service.update_user_details.assert_called_once()
@@ -390,7 +390,7 @@ async def test_update_user_details_partial(async_client, db_conn_trans, override
         )
 
     # Assertions
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_200_OK
 
     # Verify the service was called with the correct parameters
     mock_admin_service.update_user_details.assert_called_once()
