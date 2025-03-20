@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncConnection
+from uuid_utils.compat import UUID
 
 from app.depedencies.auth import PERMISSION_ADMIN
 from app.depedencies.database import get_async_conn
@@ -19,7 +20,7 @@ router = APIRouter(
 
 
 @router.get(
-    "",
+    "/users",
     response_model=JsonResponse[list[UserMembershipQueryReponse], MetaResponse],
     description="List all users with filtering and pagination.",
 )
@@ -46,4 +47,34 @@ async def get_list_users(
         message="Successfully get list of users",
         status_code=status_code,
         meta=meta,
+    )
+
+
+@router.get(
+    "/users/{user_id}",
+    response_model=JsonResponse[UserMembershipQueryReponse, None],
+    description="Get user details.",
+)
+@limiter.limit(default_limit)
+async def get_user_details(
+    request: Request,
+    response: Response,
+    user_uuid: UUID,
+    jwt_data: Annotated[tuple[UserMembershipQueryReponse, str], PERMISSION_ADMIN],
+    connection: Annotated[AsyncConnection, Depends(get_async_conn)],
+) -> JsonResponse[UserMembershipQueryReponse, None]:
+    """Get user details."""
+    admin_service: AdminService = request.state.admin_service
+    user = await admin_service.fetch_user_details(
+        current_user=jwt_data[0],
+        user_uuid=user_uuid,
+        connection=connection,
+    )
+
+    status_code = status.HTTP_200_OK
+    response.status_code = status_code
+    return JsonResponse(
+        data=user,
+        message="Successfully get user details",
+        status_code=status_code,
     )

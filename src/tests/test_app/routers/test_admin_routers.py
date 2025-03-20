@@ -78,7 +78,7 @@ async def test_get_list_users_success(async_client, db_conn, override_role_admin
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
         # Make the request with a query parameter
         response = await async_client.get(
-            "/api/v1/admin",
+            "/api/v1/admin/users",
             params={
                 "page": 1,
                 "limit": 5,
@@ -163,7 +163,7 @@ async def test_get_list_users_with_filters(async_client, db_conn, override_role_
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
         # Make the request with multiple query parameters
         response = await async_client.get(
-            "/api/v1/admin",
+            "/api/v1/admin/users",
             params={
                 "page": 1,
                 "limit": 10,
@@ -210,7 +210,7 @@ async def test_get_list_users_no_data(async_client, db_conn, override_role_admin
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
         # Make the request
         response = await async_client.get(
-            "/api/v1/admin",
+            "/api/v1/admin/users",
             headers={
                 "Authorization": f"Bearer {jwt_token}",
             },
@@ -228,7 +228,7 @@ async def test_get_list_users_no_data(async_client, db_conn, override_role_admin
 async def test_get_list_users_unauthorized(async_client, db_conn):
     """Test the get_list_users endpoint with missing authorization."""
     # Make the request without authorization header
-    response = await async_client.get("/api/v1/admin")
+    response = await async_client.get("/api/v1/admin/users")
 
     # Assertions
     assert response.status_code == status.HTTP_403_FORBIDDEN

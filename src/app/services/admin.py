@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncConnection
+from uuid_utils.compat import UUID
 
 from app.exceptions.admin import NoUsersFoundException
 from app.helpers.response_api import MetaResponse
@@ -33,3 +34,20 @@ class AdminService:
         if users is None:
             raise NoUsersFoundException()
         return users, metaresponse
+
+    async def fetch_user_details(
+        self,
+        current_user: UserMembershipQueryReponse,
+        user_uuid: UUID,
+        connection: AsyncConnection,
+    ) -> UserMembershipQueryReponse:
+        """Get user details."""
+        user = await self.repo_admin.get_user_details(
+            role=current_user.role,
+            user_uuid=user_uuid,
+            connection=connection,
+        )
+
+        if user is None:
+            raise NoUsersFoundException()
+        return user
