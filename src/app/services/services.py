@@ -61,8 +61,6 @@ class ServiceService:
         connection: AsyncConnection,
     ) -> ServiceBase:
         """Create a new service."""
-        # Check if service with the same name already exists
-
         service = await self.repo_services.create_service(
             connection=connection,
             payload=payload,
