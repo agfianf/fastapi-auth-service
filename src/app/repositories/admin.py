@@ -324,7 +324,7 @@ class AdminAsyncRepositories:
         user_uuid: UUID,
         payload: UpdateUserByAdminPayload,
         connection: AsyncConnection,
-    ) -> UserMembershipQueryReponse | None:
+    ) -> bool:
         # get role_id
         role_id_user = None
         if payload.role is not None:
