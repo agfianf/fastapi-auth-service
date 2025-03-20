@@ -480,7 +480,7 @@ async def test_update_user_details_superadmin_to_superadmin_forbidden(
 
 
 @pytest.mark.asyncio
-async def test_update_user_details_user_not_found(async_client, db_conn, override_role_admin):
+async def test_update_user_details_user_not_found(async_client, db_conn_trans, override_role_admin):
     """Test the update_user_details endpoint when the user is not found."""
     user_profile, jwt_token = override_role_admin
 
