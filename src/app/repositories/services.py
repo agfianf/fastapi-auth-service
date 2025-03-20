@@ -34,7 +34,7 @@ class ServiceStatements:
 
         # Apply filters
         if payload.name:
-            filters.append(services_table.c.name.ilike(f"%{payload.name}%"))
+            filters.append(services_table.c.name.ilike("%" + payload.name + "%"))
 
         if payload.is_active is not None:
             filters.append(services_table.c.is_active == payload.is_active)
@@ -165,8 +165,6 @@ class ServiceAsyncRepositories:
         executed_by: str,
     ) -> ServiceBase:
         """Create a new service."""
-        print("Creating service with payload:", payload)
-        print("Executed by:", executed_by)
         stmt = ServiceStatements.create_service(payload=payload, executed_by=executed_by)
         result = await connection.execute(stmt)
         new_service = result.mappings().first()
