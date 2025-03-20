@@ -192,25 +192,25 @@ class AdminAsyncRepositories:
         stmt = AdminStatement.get_user_details(user_uuid=user_uuid, role=role)
 
         result = await connection.execute(stmt)
-        row = result.mappings().all()
+        rows = result.mappings().all()
 
-        if not row:
+        if not rows:
             return None
 
         services_member = []
 
-        for r in row:
+        for row in rows:
             # Extract service information from the row
-            service_info = AdminAsyncRepositories._extract_service_info(r)
+            service_info = AdminAsyncRepositories._extract_service_info(row)
             if service_info:
                 services_member.append(service_info)
 
         user_response = {
-            **row,
+            **rows[0],
             "services": services_member,
         }
 
-        return UserMembershipQueryReponse(**dict(user_response))
+        return UserMembershipQueryReponse(**user_response)
 
     @staticmethod
     @query_exceptions_handler
@@ -221,51 +221,52 @@ class AdminAsyncRepositories:
     ) -> tuple[list[UserMembershipQueryReponse] | None, MetaResponse | None]:
         stmt_data, stmt_count = AdminStatement.get_list_users(p=payload, role=role)
 
-        # process data query
+        # Process data query
         result = await connection.execute(stmt_data)
         rows_raw = result.mappings().all()
 
         if not rows_raw:
             return None, None
 
-        d_services = {}
+        # Group services by user UUID
+        user_services: dict[UUID, list[dict]] = {}
         for row in rows_raw:
-            services_member = []
-
-            if row["service_uuid"] in d_services:
-                d_services[row["uuid"]] = []
+            user_uuid = row["uuid"]
+            if user_uuid not in user_services:
+                user_services[user_uuid] = []
 
             service_info = AdminAsyncRepositories._extract_service_info(row)
             if service_info:
-                d_services[row["uuid"]].append(service_info)
+                user_services[user_uuid].append(service_info)
 
-        ls_users = []
+        # Create unique user records with their services
+        unique_users = []
+        processed_uuids = set()
         for row in rows_raw:
-            # Extract service information from the row
-            services_member = d_services.get(row["uuid"], [])
-            if not services_member:
+            user_uuid = row["uuid"]
+            if user_uuid in processed_uuids:
                 continue
 
-            user_response = {
-                **row,
-                "services": services_member,
-            }
-            ls_users.append(user_response)
+            user_data = dict(row)
+            user_data["services"] = user_services.get(user_uuid, [])
+            unique_users.append(user_data)
+            processed_uuids.add(user_uuid)
 
-        rows = [UserMembershipQueryReponse(**dict(row)) for row in ls_users]
+        # Convert to response objects
+        users = [UserMembershipQueryReponse(**user_data) for user_data in unique_users]
 
-        # process metaresponse
+        # Process meta response
         total_items_raw = await connection.execute(stmt_count)
         total_items = total_items_raw.scalar_one()
         total_pages = (total_items + payload.limit - 1) // payload.limit
 
-        meta = {
-            "current_page": payload.page,
-            "page_size": len(rows),
-            "prev_page": payload.page > 1,
-            "next_page": payload.page < total_pages,
-            "total_pages": total_pages,
-            "total_items": total_items,
-        }
+        meta = MetaResponse(
+            current_page=payload.page,
+            page_size=len(users),
+            prev_page=payload.page > 1,
+            next_page=payload.page < total_pages,
+            total_pages=total_pages,
+            total_items=total_items,
+        )
 
-        return rows, MetaResponse(**meta)
+        return users, meta
