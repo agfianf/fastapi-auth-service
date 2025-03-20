@@ -116,5 +116,4 @@ class AuthAsyncRepositories:
             "services": services,
         }
 
-        print(user_response)
         return UserMembershipQueryReponse.model_validate(user_response)
