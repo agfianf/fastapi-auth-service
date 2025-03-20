@@ -1,6 +1,16 @@
+from enum import StrEnum
+
 from pydantic import Field
 
 from app.schemas._default_base import BaseAudit
+
+
+class UserRole(StrEnum):
+    superadmin = "superadmin"
+    admin = "admin"
+    staff = "staff"
+    member = "member"
+    guest = "guest"
 
 
 class RoleBase(BaseAudit):

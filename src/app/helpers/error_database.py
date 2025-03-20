@@ -74,6 +74,6 @@ def query_exceptions_handler(func: Callable[P, Awaitable[T]]) -> Callable[P, Awa
             error_trace = traceback.format_exc()
             error_msg = str(e)
             print(f"Unexpected database error: {error_msg}\n{error_trace}")
-            raise DatabaseException() from e
+            raise DatabaseException(f"{error_msg}") from e
 
     return async_wrapper
