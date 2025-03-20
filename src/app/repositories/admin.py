@@ -1,4 +1,4 @@
-from sqlalchemy import Select, Update, and_, func, select, update
+from sqlalchemy import Select, Update, and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils.compat import UUID
 
@@ -107,6 +107,9 @@ class AdminStatement:
             users_table.c.created_at,
             users_table.c.updated_at,
             users_table.c.deleted_at,
+            users_table.c.created_by,
+            users_table.c.updated_by,
+            users_table.c.deleted_by,
             roles_table.c.name.label("role"),
         ]
 
@@ -181,6 +184,7 @@ class AdminStatement:
     def update_user_details(
         role_admin: str,
         user_uuid: UUID,
+        executed_by: str,
         role_id_user: int | None,
         is_active: bool | None,
     ) -> Update:
@@ -198,8 +202,55 @@ class AdminStatement:
             update_values["role_id"] = role_id_user
         if is_active is not None:
             update_values["is_active"] = is_active
+        update_values["updated_by"] = executed_by
 
         update_stmt = update(users_table).values(**update_values).where(and_(*filters)).returning(1)
+        return update_stmt
+
+    @staticmethod
+    def hard_delete_user(
+        role_admin: str,
+        user_uuid: UUID,
+    ) -> Update:
+        """Generate query untuk delete user."""
+        filters = []
+        if role_admin == "admin":
+            # hide superadmin info from admin
+            filters.append(users_table.c.role_id != 1)
+
+        filters.append(users_table.c.deleted_at.is_(None))
+        filters.append(users_table.c.uuid == user_uuid)
+
+        delete_stmt = delete(users_table).where(and_(*filters)).returning(1)
+        return delete_stmt
+
+    @staticmethod
+    def soft_delete_user(
+        role_admin: str,
+        executed_by: str,
+        user_uuid: UUID,
+    ) -> Update:
+        """Generate query untuk soft delete user."""
+        filters = []
+        if role_admin == "admin":
+            # hide superadmin info from admin
+            filters.append(users_table.c.role_id != 1)
+
+        filters.append(users_table.c.deleted_at.is_(None))
+        filters.append(users_table.c.uuid == user_uuid)
+
+        update_stmt = (
+            update(users_table)
+            .values(
+                deleted_at=func.now(),
+                deleted_by=executed_by,
+                is_active=False,
+                mfa_enabled=False,
+                mfa_secret=None,
+            )
+            .where(and_(*filters))
+            .returning(1)
+        )
         return update_stmt
 
 
@@ -322,6 +373,7 @@ class AdminAsyncRepositories:
     async def update_user_details(
         role_admin: str,
         user_uuid: UUID,
+        executed_by: str,
         payload: UpdateUserByAdminPayload,
         connection: AsyncConnection,
     ) -> bool:
@@ -336,8 +388,27 @@ class AdminAsyncRepositories:
         update_stmt = AdminStatement.update_user_details(
             role_admin=role_admin,
             user_uuid=user_uuid,
+            executed_by=executed_by,
             role_id_user=role_id_user,
             is_active=payload.is_active,
         )
         result_update = await connection.execute(update_stmt)
         return result_update.scalar_one_or_none() == 1
+
+    @staticmethod
+    @query_exceptions_handler
+    async def soft_delete_user(
+        role_admin: str,
+        executed_by: str,
+        user_uuid: UUID,
+        connection: AsyncConnection,
+    ) -> bool:
+        """Delete user."""
+        delete_stmt = AdminStatement.soft_delete_user(
+            role_admin=role_admin,
+            user_uuid=user_uuid,
+            executed_by=executed_by,
+        )
+
+        result = await connection.execute(delete_stmt)
+        return result.scalar_one_or_none() == 1

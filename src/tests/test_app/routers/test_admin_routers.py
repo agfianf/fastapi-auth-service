@@ -354,7 +354,7 @@ async def test_update_user_details_success(async_client, db_conn_trans, override
         )
 
     # Assertions
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_200_OK
 
     # Verify the service was called with the correct parameters
     mock_admin_service.update_user_details.assert_called_once()
@@ -390,7 +390,7 @@ async def test_update_user_details_partial(async_client, db_conn_trans, override
         )
 
     # Assertions
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_200_OK
 
     # Verify the service was called with the correct parameters
     mock_admin_service.update_user_details.assert_called_once()
@@ -533,6 +533,169 @@ async def test_update_user_details_unauthorized(async_client, db_conn_trans):
 
     # Make the request without authorization header
     response = await async_client.put(f"/api/v1/admin/users/{user_uuid}", data=payload)
+
+    # Assertions
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+#! -------------------------------------------------
+# New test cases for delete user endpoint
+@pytest.mark.asyncio
+async def test_delete_user_success(async_client, db_conn_trans, override_role_admin):
+    """Test the delete_user endpoint when it successfully deletes a user."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock admin service
+    mock_admin_service = AsyncMock()
+    mock_admin_service.delete_user.return_value = True
+
+    user_uuid = str(generate_uuid())
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.delete(
+            f"/api/v1/admin/users/{user_uuid}",
+            headers={
+                "Authorization": f"Bearer {jwt_token}",
+            },
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_200_OK
+
+    response_json = response.json()
+    assert response_json["status_code"] == status.HTTP_200_OK
+    assert response_json["message"] == "Successfully deleted user"
+    assert response_json["data"] is None
+
+    # Verify the service was called with the correct parameters
+    mock_admin_service.delete_user.assert_called_once()
+    call_args = mock_admin_service.delete_user.call_args
+    args, kwargs = call_args
+
+    assert kwargs["current_user"].uuid == user_profile.uuid
+    assert kwargs["current_user"].role == user_profile.role
+    assert str(kwargs["user_uuid"]) == user_uuid
+
+
+@pytest.mark.asyncio
+async def test_delete_user_admin_to_superadmin_forbidden(async_client, db_conn_trans, override_role_admin):
+    """Test that an admin cannot delete a superadmin user."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock admin service to raise the specific exception
+    mock_admin_service = AsyncMock()
+    mock_admin_service.delete_user.side_effect = AdminCannotUpdateSuperAdminException()
+
+    user_uuid = str(generate_uuid())
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.delete(
+            f"/api/v1/admin/users/{user_uuid}", headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    response_json = response.json()
+    assert response_json["detail"] == "Admin cannot update to superadmin."
+
+
+@pytest.mark.asyncio
+async def test_delete_user_admin_to_admin_forbidden(async_client, db_conn_trans, override_role_admin):
+    """Test that an admin cannot delete another admin user."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock admin service to raise the specific exception
+    mock_admin_service = AsyncMock()
+    mock_admin_service.delete_user.side_effect = AdminCannotUpdateAdminException()
+
+    user_uuid = str(generate_uuid())
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.delete(
+            f"/api/v1/admin/users/{user_uuid}", headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    response_json = response.json()
+    assert response_json["detail"] == "Admin cannot update to admin."
+
+
+@pytest.mark.asyncio
+async def test_delete_user_superadmin_to_superadmin_forbidden(
+    async_client, db_conn_trans, override_role_superadmin_in_admin
+):
+    """Test that a superadmin cannot delete another superadmin user."""
+    user_profile, jwt_token = override_role_superadmin_in_admin
+
+    # Mock admin service to raise the specific exception
+    mock_admin_service = AsyncMock()
+    mock_admin_service.delete_user.side_effect = SuperadminCannotUpdateSuperadminException()
+
+    user_uuid = str(generate_uuid())
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.delete(
+            f"/api/v1/admin/users/{user_uuid}", headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    response_json = response.json()
+    assert response_json["detail"] == "Superadmin cannot update to superadmin."
+
+
+@pytest.mark.asyncio
+async def test_delete_user_not_found(async_client, db_conn_trans, override_role_admin):
+    """Test the delete_user endpoint when the user is not found."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock admin service to raise NoUsersFoundException
+    mock_admin_service = AsyncMock()
+    mock_admin_service.delete_user.side_effect = NoUsersFoundException()
+
+    user_uuid = str(generate_uuid())
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.delete(
+            f"/api/v1/admin/users/{user_uuid}", headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    response_json = response.json()
+    assert response_json["detail"] == "No users found."
+
+
+@pytest.mark.asyncio
+async def test_delete_user_update_failed(async_client, db_conn_trans, override_role_admin):
+    """Test the delete_user endpoint when the delete operation fails."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock admin service to raise FailedUpdateUserException
+    mock_admin_service = AsyncMock()
+    mock_admin_service.delete_user.side_effect = FailedUpdateUserException()
+
+    user_uuid = str(generate_uuid())
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.delete(
+            f"/api/v1/admin/users/{user_uuid}", headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    response_json = response.json()
+    assert response_json["detail"] == "Failed to update user."
+
+
+@pytest.mark.asyncio
+async def test_delete_user_unauthorized(async_client, db_conn_trans):
+    """Test the delete_user endpoint with missing authorization."""
+    user_uuid = str(generate_uuid())
+
+    # Make the request without authorization header
+    response = await async_client.delete(f"/api/v1/admin/users/{user_uuid}")
 
     # Assertions
     assert response.status_code == status.HTTP_403_FORBIDDEN
