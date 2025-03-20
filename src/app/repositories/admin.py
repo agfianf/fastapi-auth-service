@@ -24,9 +24,7 @@ class AdminStatement:
             users_table.c.email,
             users_table.c.phone,
             users_table.c.telegram,
-            users_table.c.password_hash,
             users_table.c.mfa_enabled,
-            users_table.c.mfa_secret,
             users_table.c.is_active,
             users_table.c.created_at,
             users_table.c.updated_at,
@@ -194,15 +192,18 @@ class AdminAsyncRepositories:
         stmt = AdminStatement.get_user_details(user_uuid=user_uuid, role=role)
 
         result = await connection.execute(stmt)
-        row = result.mappings().first()
+        row = result.mappings().all()
 
         if not row:
             return None
 
         services_member = []
-        service_info = AdminAsyncRepositories._extract_service_info(row)
-        if service_info:
-            services_member.append(service_info)
+
+        for r in row:
+            # Extract service information from the row
+            service_info = AdminAsyncRepositories._extract_service_info(r)
+            if service_info:
+                services_member.append(service_info)
 
         user_response = {
             **row,
@@ -227,12 +228,23 @@ class AdminAsyncRepositories:
         if not rows_raw:
             return None, None
 
-        ls_users = []
+        d_services = {}
         for row in rows_raw:
             services_member = []
+
+            if row["service_uuid"] in d_services:
+                d_services[row["uuid"]] = []
+
             service_info = AdminAsyncRepositories._extract_service_info(row)
             if service_info:
-                services_member.append(service_info)
+                d_services[row["uuid"]].append(service_info)
+
+        ls_users = []
+        for row in rows_raw:
+            # Extract service information from the row
+            services_member = d_services.get(row["uuid"], [])
+            if not services_member:
+                continue
 
             user_response = {
                 **row,
