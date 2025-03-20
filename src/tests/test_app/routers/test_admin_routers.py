@@ -4,9 +4,16 @@ import pytest
 
 from fastapi import status
 
-from app.exceptions.admin import NoUsersFoundException
+from app.exceptions.admin import (
+    AdminCannotUpdateAdminException,
+    AdminCannotUpdateSuperAdminException,
+    FailedUpdateUserException,
+    NoUsersFoundException,
+    SuperadminCannotUpdateSuperadminException,
+)
 from app.helpers.generator import generate_uuid
 from app.helpers.response_api import MetaResponse
+from app.main import app
 from app.schemas.users import UserMembershipQueryReponse
 
 
@@ -234,6 +241,9 @@ async def test_get_list_users_unauthorized(async_client, db_conn):
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+# ! ---------------------------------------------
+
+
 @pytest.mark.asyncio
 async def test_get_user_admin_details_as_admin(async_client, db_conn, override_role_admin):
     """Test the get_user_admin_details endpoint as an admin user."""
@@ -317,3 +327,212 @@ async def test_get_user_superadmin_details_as_admin(async_client, db_conn, overr
     assert response.status_code == status.HTTP_404_NOT_FOUND
     #! Note: the current implementation still not standarize error response, so we using `detail`
     assert response_json["detail"] == "No users found."
+
+
+# ! ---------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_update_user_details_success(async_client, db_conn_trans, override_role_admin):
+    """Test the update_user_details endpoint when it successfully updates a user."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock admin service
+    mock_admin_service = AsyncMock()
+    mock_admin_service.update_user_details.return_value = True
+
+    user_uuid = str(generate_uuid())
+    payload = {"role": "staff", "is_active": True}
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.put(
+            f"/api/v1/admin/users/{user_uuid}",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {jwt_token}",
+            },
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # Verify the service was called with the correct parameters
+    mock_admin_service.update_user_details.assert_called_once()
+    call_args = mock_admin_service.update_user_details.call_args
+    args, kwargs = call_args
+
+    assert kwargs["current_user"].uuid == user_profile.uuid
+    assert kwargs["current_user"].role == user_profile.role
+    assert str(kwargs["user_uuid"]) == user_uuid
+    assert kwargs["payload"].role == "staff"
+    assert kwargs["payload"].is_active is True
+
+
+@pytest.mark.asyncio
+async def test_update_user_details_partial(async_client, db_conn_trans, override_role_admin):
+    """Test the update_user_details endpoint with partial data (only updating role)."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock admin service
+    mock_admin_service = AsyncMock()
+    mock_admin_service.update_user_details.return_value = True
+
+    user_uuid = str(generate_uuid())
+    payload = {"role": "staff", "is_active": None}
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.put(
+            f"/api/v1/admin/users/{user_uuid}",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {jwt_token}",
+            },
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # Verify the service was called with the correct parameters
+    mock_admin_service.update_user_details.assert_called_once()
+    call_args = mock_admin_service.update_user_details.call_args
+    args, kwargs = call_args
+
+    assert kwargs["payload"].role == "staff"
+    assert kwargs["payload"].is_active is None
+
+
+@pytest.mark.asyncio
+async def test_update_user_details_admin_to_superadmin_forbidden(async_client, db_conn_trans, override_role_admin):
+    """Test that an admin cannot update a user to superadmin role."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock admin service to raise the specific exception
+    mock_admin_service = AsyncMock()
+    mock_admin_service.update_user_details.side_effect = AdminCannotUpdateSuperAdminException()
+
+    user_uuid = str(generate_uuid())
+    payload = {"role": "superadmin", "is_active": True}
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.put(
+            f"/api/v1/admin/users/{user_uuid}",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {jwt_token}",
+            },
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    response_json = response.json()
+    assert response_json["detail"] == "Admin cannot update to superadmin."
+
+
+@pytest.mark.asyncio
+async def test_update_user_details_admin_to_admin_forbidden(async_client, db_conn_trans, override_role_admin):
+    """Test that an admin cannot update a user to admin role."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock admin service to raise the specific exception
+    mock_admin_service = AsyncMock()
+    mock_admin_service.update_user_details.side_effect = AdminCannotUpdateAdminException()
+
+    user_uuid = str(generate_uuid())
+    payload = {"role": "admin", "is_active": True}
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.put(
+            f"/api/v1/admin/users/{user_uuid}", data=payload, headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    response_json = response.json()
+    assert response_json["detail"] == "Admin cannot update to admin."
+
+
+@pytest.mark.asyncio
+async def test_update_user_details_superadmin_to_superadmin_forbidden(
+    async_client, db_conn_trans, override_role_superadmin_in_admin
+):
+    """Test that a superadmin cannot update a user to superadmin role."""
+    user_profile, jwt_token = override_role_superadmin_in_admin
+
+    # Mock admin service to raise the specific exception
+    mock_admin_service = AsyncMock()
+    mock_admin_service.update_user_details.side_effect = SuperadminCannotUpdateSuperadminException()
+    print(f"{app.dependency_overrides=}")
+
+    user_uuid = str(generate_uuid())
+    payload = {"role": "superadmin", "is_active": True}
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.put(
+            f"/api/v1/admin/users/{user_uuid}", data=payload, headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+
+    print(f"{response.status_code=}")
+    print(f"{response.json()=}")
+    # Assertions
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    response_json = response.json()
+    assert response_json["detail"] == "Superadmin cannot update to superadmin."
+
+
+@pytest.mark.asyncio
+async def test_update_user_details_user_not_found(async_client, db_conn, override_role_admin):
+    """Test the update_user_details endpoint when the user is not found."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock admin service to raise NoUsersFoundException
+    mock_admin_service = AsyncMock()
+    mock_admin_service.update_user_details.side_effect = NoUsersFoundException()
+
+    user_uuid = str(generate_uuid())
+    payload = {"role": "staff", "is_active": True}
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.put(
+            f"/api/v1/admin/users/{user_uuid}", data=payload, headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    response_json = response.json()
+    assert response_json["detail"] == "No users found."
+
+
+@pytest.mark.asyncio
+async def test_update_user_details_update_failed(async_client, db_conn_trans, override_role_admin):
+    """Test the update_user_details endpoint when the update operation fails."""
+    user_profile, jwt_token = override_role_admin
+
+    # Mock admin service to raise FailedUpdateUserException
+    mock_admin_service = AsyncMock()
+    mock_admin_service.update_user_details.side_effect = FailedUpdateUserException()
+
+    user_uuid = str(generate_uuid())
+    payload = {"role": "staff", "is_active": True}
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
+        response = await async_client.put(
+            f"/api/v1/admin/users/{user_uuid}", data=payload, headers={"Authorization": f"Bearer {jwt_token}"}
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    response_json = response.json()
+    assert response_json["detail"] == "Failed to update user."
+
+
+@pytest.mark.asyncio
+async def test_update_user_details_unauthorized(async_client, db_conn_trans):
+    """Test the update_user_details endpoint with missing authorization."""
+    user_uuid = str(generate_uuid())
+    payload = {"role": "user", "is_active": True}
+
+    # Make the request without authorization header
+    response = await async_client.put(f"/api/v1/admin/users/{user_uuid}", data=payload)
+
+    # Assertions
+    assert response.status_code == status.HTTP_403_FORBIDDEN
