@@ -230,14 +230,14 @@ class MemberService:
         connection: AsyncConnection,
     ) -> MFAQRCodeResponse:
         """Get MFA QR code for setup."""
-        if current_user.mfa_enabled is False:
-            raise MFANotEnabledException()
-
         # Get the current member details
         member = await self.fetch_member_details(
             connection=connection,
             current_user=current_user,
         )
+
+        if member.mfa_enabled is False:
+            raise MFANotEnabledException()
 
         # Generate QR code
         qr_code_bs64 = TwoFactorAuth.get_provisioning_qrcode_base64(

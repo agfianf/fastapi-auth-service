@@ -109,7 +109,6 @@ class UpdateMemberPayload(BaseModel):
                 detail="Username cannot contain space",
             )
 
-        print(data)
         return data
 
     def transform(self) -> dict:

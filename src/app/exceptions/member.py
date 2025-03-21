@@ -21,8 +21,10 @@ class PasswordUpdateFailedException(HTTPException):
     def __init__(self, messages: list[str] | None = None) -> None:
         if messages:
             err_msg = ", ".join(messages)
+            full_message = f"Failed to update password. {err_msg}"
+        else:
+            full_message = "Failed to update password."
 
-        full_message = f"Failed to update password. {err_msg}" if messages else "Failed to update password."
         super().__init__(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=full_message,
