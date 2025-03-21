@@ -41,6 +41,26 @@ The system consists of three main components:
     alembic upgrade head
     ```
 
+#### Project Structure
+```bash
+├── src/                    # Main code lives here! ❤️
+│   ├── alembic.ini             # 🛠️ Config for database migrations. 
+│   ├── app/                    # 🚀 FastAPI app code—your API! 
+│   ├── frontend/               # 🌐 Frontend files (if any). [Not used yet]
+│   ├── migrations/             # 📜 Database migration scripts. 
+│   ├── tests/                  # ✅ Tests using pytest. 
+│   └── worker/                 # ⚙️ Background task code. [Not used yet]
+├── assets/                 # Static files like images. ✨
+├── Dockerfile              # Builds the app’s Docker image. 🐳
+├── Dockerfile.dev          # Docker setup for development. 🔧
+├── Makefile                # Shortcuts for common tasks. 📋
+├── README.md               # Project info and guide. 📖
+├── docker-compose.yaml     # Runs multiple services together. 🎻
+├── pyproject.toml          # Python tool and dependency config. 🐍
+├── ruff.toml               # Linter settings for clean code. 🧹
+└── uv.lock                 # Locks dependency versions. 🔒
+```
+
 ## Features
 
 ### Authentication 🔑
@@ -128,3 +148,6 @@ The current JWT payload includes more data, such as `email`, `phone`, and a `ser
 - [ ] **Simplify JWT Payload**: Remove sensitive data (e.g., `email`, `phone`) and the `services` array from the JWT to reduce its size and minimize data exposure risks.
 - [ ] **Maybe, Centralize Permission Checks**: Store service access and roles in a database (cached in Redis) and create an endpoint (e.g., `GET /api/v1/auth/permissions`) for services to dynamically check user access and roles.
 - [ ] **Implement Logging and Monitoring**: Add logging for all authentication and authorization events to enable auditing and monitoring of access attempts.
+- [ ] **Build a Frontend**: Create a simple frontend application to demonstrate the Auth Service's functionality and provide a user-friendly interface for authentication and user management.
+- [ ] **Add Tests**: Implement unit and integration tests to ensure the reliability and correctness of the Auth Service.
+- [ ] **Improve Documentation**: Enhance the README and API documentation to provide clearer instructions and examples for developers using the Auth Service.
