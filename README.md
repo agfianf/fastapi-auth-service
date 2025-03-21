@@ -50,15 +50,15 @@ The system consists of three main components:
 │   ├── migrations/             # 📜 Database migration scripts. 
 │   ├── tests/                  # ✅ Tests using pytest. 
 │   └── worker/                 # ⚙️ Background task code. [Not used yet]
-├── assets/                 # Static files like images. ✨
-├── Dockerfile              # Builds the app’s Docker image. 🐳
-├── Dockerfile.dev          # Docker setup for development. 🔧
-├── Makefile                # Shortcuts for common tasks. 📋
-├── README.md               # Project info and guide. 📖
-├── docker-compose.yaml     # Runs multiple services together. 🎻
-├── pyproject.toml          # Python tool and dependency config. 🐍
-├── ruff.toml               # Linter settings for clean code. 🧹
-└── uv.lock                 # Locks dependency versions. 🔒
+├── assets/                 # Static files like images.
+├── README.md               # 📖 Project info and guide. 
+├── Dockerfile              # 🐳 Builds the app’s Docker image. 
+├── Dockerfile.dev          # 🐳 Docker setup for development.
+├── docker-compose.yaml     # 🎻  Runs multiple services together. 
+├── Makefile                # 📋 Shortcuts for common tasks. 
+├── pyproject.toml          # 🐍 Python tool and dependency config. 
+├── ruff.toml               # 🧹 Linter settings for clean code. 
+└── uv.lock                 # 🔒 Locks dependency versions. 
 ```
 
 ## Features
