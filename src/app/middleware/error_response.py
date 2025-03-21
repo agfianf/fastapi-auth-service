@@ -44,11 +44,14 @@ async def handle_error_response(
     # Handle RequestValidationError
     elif isinstance(exc, RequestValidationError):
         errors = exc.errors()
-
-        type_error = errors[0]["type"]
-        location = " in ".join(str(item) for item in errors[0]["loc"])
-        msg_error = errors[0]["msg"]
-        pesan = f"Invalid input. Please check and try again. {type_error=} | {location=}. {msg_error=}"
+    
+        if errors:
+            type_error = errors[0]["type"]
+            location = " in ".join(str(item) for item in errors[0]["loc"])
+            msg_error = errors[0]["msg"]
+            pesan = f"Invalid input. Please check and try again. {type_error=} | {location=}. {msg_error=}"
+        else:
+            pesan = "Invalid input. Please check and try again."
 
         data = JsonResponse(
             data=None,
