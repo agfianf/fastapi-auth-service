@@ -60,4 +60,14 @@ async def handle_error_response(
             content=data.model_dump(),
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
-    return exc
+    # Handle any other exceptions with a generic 500 error
+    data = JsonResponse(
+        data=None,
+        message="An unexpected error occurred",
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        success=False,
+    )
+    return JSONResponse(
+        content=data.model_dump(),
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
