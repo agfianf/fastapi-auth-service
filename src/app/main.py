@@ -13,14 +13,17 @@ from app.config import settings
 from app.integrations.redis import RedisHelper
 from app.repositories.admin import AdminAsyncRepositories
 from app.repositories.auth import AuthAsyncRepositories
+from app.repositories.member import MemberAsyncRepositories
 from app.repositories.roles import RoleAsyncRepositories
 from app.repositories.services import ServiceAsyncRepositories
 from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
+from app.routers.member import router as member_router
 from app.routers.roles import router as roles_router
 from app.routers.services import router as services_router
 from app.services.admin import AdminService
 from app.services.auth import AuthService
+from app.services.member import MemberService
 from app.services.roles import RoleService
 from app.services.services import ServiceService
 
@@ -53,12 +56,19 @@ async def lifespan(app: FastAPI):  # noqa
         redis=redis,
     )
 
+    member_repo = MemberAsyncRepositories()
+    member_service = MemberService(
+        repo_member=member_repo,
+        redis=redis,
+    )
+
     yield {
         "redis_helper": redis,
         "auth_service": auth_service,
         "admin_service": admin_service,
         "role_service": role_service,
         "service_service": service_service,
+        "member_service": member_service,
     }
 
     print("Cleaning up resources...")
@@ -86,5 +96,6 @@ async def root():  # noqa: ANN201
 
 app.include_router(auth_router)
 app.include_router(admin_router)
+app.include_router(member_router)
 app.include_router(roles_router)
 app.include_router(services_router)

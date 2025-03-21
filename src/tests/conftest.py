@@ -10,6 +10,7 @@ from app.main import app
 # Fixtures
 from tests.fixtures.auth.roles import (
     override_role_admin,
+    override_role_jwt_bearer,
     override_role_superadmin,
     override_role_superadmin_in_admin,
 )
