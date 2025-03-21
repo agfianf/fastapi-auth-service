@@ -96,10 +96,7 @@ async def root():  # noqa: ANN201
     return RedirectResponse("/docs")
 
 
-# These two handlers can't be combined because they handle different exception types
-# HTTPException handles explicit raised exceptions
 app.add_exception_handler(HTTPException, handle_error_response)
-# RequestValidationError handles request validation failures
 app.add_exception_handler(RequestValidationError, handle_error_response)
 
 app.include_router(auth_router)
