@@ -312,7 +312,7 @@ async def test_get_service_by_uuid_not_found(async_client, db_conn, override_rol
 
     # Assertions
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "Service not found"
+    assert response.json()["message"] == "Service not found"
 
 
 @pytest.mark.asyncio
@@ -421,7 +421,7 @@ async def test_create_service_name_exists(async_client, db_conn_trans, override_
 
     # Assertions
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["detail"] == "Service with this name already exists"
+    assert response.json()["message"] == "Service with this name already exists"
 
 
 @pytest.mark.asyncio
@@ -450,7 +450,7 @@ async def test_create_service_failure(async_client, db_conn_trans, override_role
 
     # Assertions
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-    assert response.json()["detail"] == "Failed to create service"
+    assert response.json()["message"] == "Failed to create service"
 
 
 @pytest.mark.asyncio
@@ -564,7 +564,7 @@ async def test_update_service_not_found(async_client, db_conn_trans, override_ro
 
     # Assertions
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "Service not found"
+    assert response.json()["message"] == "Service not found"
 
 
 @pytest.mark.asyncio
@@ -590,7 +590,7 @@ async def test_update_service_name_exists(async_client, db_conn_trans, override_
 
     # Assertions
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["detail"] == "Service with this name already exists"
+    assert response.json()["message"] == "Service with this name already exists"
 
 
 @pytest.mark.asyncio
@@ -616,7 +616,7 @@ async def test_update_service_failure(async_client, db_conn_trans, override_role
 
     # Assertions
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-    assert response.json()["detail"] == "Failed to update service"
+    assert response.json()["message"] == "Failed to update service"
 
 
 @pytest.mark.asyncio
@@ -695,7 +695,7 @@ async def test_delete_service_not_found(async_client, db_conn_trans, override_ro
 
     # Assertions
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "Service not found"
+    assert response.json()["message"] == "Service not found"
 
 
 @pytest.mark.asyncio
@@ -717,7 +717,7 @@ async def test_delete_service_failure(async_client, db_conn_trans, override_role
 
     # Assertions
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-    assert response.json()["detail"] == "Failed to delete service"
+    assert response.json()["message"] == "Failed to delete service"
 
 
 @pytest.mark.asyncio

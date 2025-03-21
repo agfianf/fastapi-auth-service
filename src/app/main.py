@@ -5,12 +5,14 @@ This module initializes the FastAPI application and defines the basic routes.
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from app.config import settings
 from app.integrations.redis import RedisHelper
+from app.middleware.error_response import handle_error_response
 from app.repositories.admin import AdminAsyncRepositories
 from app.repositories.auth import AuthAsyncRepositories
 from app.repositories.member import MemberAsyncRepositories
@@ -93,6 +95,12 @@ app.add_middleware(
 async def root():  # noqa: ANN201
     return RedirectResponse("/docs")
 
+
+# These two handlers can't be combined because they handle different exception types
+# HTTPException handles explicit raised exceptions
+app.add_exception_handler(HTTPException, handle_error_response)
+# RequestValidationError handles request validation failures
+app.add_exception_handler(RequestValidationError, handle_error_response)
 
 app.include_router(auth_router)
 app.include_router(admin_router)

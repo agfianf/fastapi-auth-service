@@ -228,7 +228,7 @@ async def test_get_list_users_no_data(async_client, db_conn, override_role_admin
 
     response_json = response.json()
     #! Note: the current implementation still not standarize error response, so we using `detail`
-    assert response_json["detail"] == "No users found."
+    assert response_json["message"] == "No users found."
 
 
 @pytest.mark.asyncio
@@ -326,7 +326,7 @@ async def test_get_user_superadmin_details_as_admin(async_client, db_conn, overr
     # Assertions
     assert response.status_code == status.HTTP_404_NOT_FOUND
     #! Note: the current implementation still not standarize error response, so we using `detail`
-    assert response_json["detail"] == "No users found."
+    assert response_json["message"] == "No users found."
 
 
 # ! ---------------------------------------------
@@ -425,7 +425,7 @@ async def test_update_user_details_admin_to_superadmin_forbidden(async_client, d
     # Assertions
     assert response.status_code == status.HTTP_403_FORBIDDEN
     response_json = response.json()
-    assert response_json["detail"] == "Admin cannot update to superadmin."
+    assert response_json["message"] == "Admin cannot update to superadmin."
 
 
 @pytest.mark.asyncio
@@ -448,7 +448,7 @@ async def test_update_user_details_admin_to_admin_forbidden(async_client, db_con
     # Assertions
     assert response.status_code == status.HTTP_403_FORBIDDEN
     response_json = response.json()
-    assert response_json["detail"] == "Admin cannot update to admin."
+    assert response_json["message"] == "Admin cannot update to admin."
 
 
 @pytest.mark.asyncio
@@ -476,7 +476,7 @@ async def test_update_user_details_superadmin_to_superadmin_forbidden(
     # Assertions
     assert response.status_code == status.HTTP_403_FORBIDDEN
     response_json = response.json()
-    assert response_json["detail"] == "Superadmin cannot update to superadmin."
+    assert response_json["message"] == "Superadmin cannot update to superadmin."
 
 
 @pytest.mark.asyncio
@@ -499,7 +499,7 @@ async def test_update_user_details_user_not_found(async_client, db_conn_trans, o
     # Assertions
     assert response.status_code == status.HTTP_404_NOT_FOUND
     response_json = response.json()
-    assert response_json["detail"] == "No users found."
+    assert response_json["message"] == "No users found."
 
 
 @pytest.mark.asyncio
@@ -522,7 +522,7 @@ async def test_update_user_details_update_failed(async_client, db_conn_trans, ov
     # Assertions
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     response_json = response.json()
-    assert response_json["detail"] == "Failed to update user."
+    assert response_json["message"] == "Failed to update user."
 
 
 @pytest.mark.asyncio
@@ -596,7 +596,7 @@ async def test_delete_user_admin_to_superadmin_forbidden(async_client, db_conn_t
     # Assertions
     assert response.status_code == status.HTTP_403_FORBIDDEN
     response_json = response.json()
-    assert response_json["detail"] == "Admin cannot update to superadmin."
+    assert response_json["message"] == "Admin cannot update to superadmin."
 
 
 @pytest.mark.asyncio
@@ -618,7 +618,7 @@ async def test_delete_user_admin_to_admin_forbidden(async_client, db_conn_trans,
     # Assertions
     assert response.status_code == status.HTTP_403_FORBIDDEN
     response_json = response.json()
-    assert response_json["detail"] == "Admin cannot update to admin."
+    assert response_json["message"] == "Admin cannot update to admin."
 
 
 @pytest.mark.asyncio
@@ -642,7 +642,7 @@ async def test_delete_user_superadmin_to_superadmin_forbidden(
     # Assertions
     assert response.status_code == status.HTTP_403_FORBIDDEN
     response_json = response.json()
-    assert response_json["detail"] == "Superadmin cannot update to superadmin."
+    assert response_json["message"] == "Superadmin cannot update to superadmin."
 
 
 @pytest.mark.asyncio
@@ -664,7 +664,7 @@ async def test_delete_user_not_found(async_client, db_conn_trans, override_role_
     # Assertions
     assert response.status_code == status.HTTP_404_NOT_FOUND
     response_json = response.json()
-    assert response_json["detail"] == "No users found."
+    assert response_json["message"] == "No users found."
 
 
 @pytest.mark.asyncio
@@ -686,7 +686,7 @@ async def test_delete_user_update_failed(async_client, db_conn_trans, override_r
     # Assertions
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     response_json = response.json()
-    assert response_json["detail"] == "Failed to update user."
+    assert response_json["message"] == "Failed to update user."
 
 
 @pytest.mark.asyncio
