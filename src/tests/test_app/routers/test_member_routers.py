@@ -96,7 +96,7 @@ async def test_get_member_details_not_found(async_client, db_conn, override_role
 
     # Assertions
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "Member not found"
+    assert response.json()["message"] == "Member not found"
 
 
 @pytest.mark.asyncio
@@ -194,7 +194,7 @@ async def test_update_password_current_mismatch(async_client, db_conn_trans, ove
     # Assertions
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["detail"] == "Current password is incorrect"
+    assert response.json()["message"] == "Current password is incorrect"
 
 
 @pytest.mark.asyncio
@@ -330,7 +330,7 @@ async def test_update_mfa_invalid_code(async_client, db_conn_trans, override_rol
 
     # Assertions
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["detail"] == "Invalid MFA code provided"
+    assert response.json()["message"] == "Invalid MFA code provided"
 
 
 @pytest.mark.asyncio
@@ -431,7 +431,7 @@ async def test_update_profile_failure(async_client, db_conn_trans, override_role
 
     # Assertions
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "Member not found"
+    assert response.json()["message"] == "Member not found"
 
 
 @pytest.mark.asyncio

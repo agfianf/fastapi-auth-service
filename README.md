@@ -143,7 +143,7 @@ Below is a simplified example of a JWT payload issued by the Auth Service. The c
 The current JWT payload includes more data, such as `email`, `phone`, and a `services` array with the user’s accessible services and roles. This has been simplified in the example above to reduce token size and improve security, as sensitive data should not be stored in the JWT.
 
 ## ✅ Things to Improve 
-- [ ] **Standardize Error Responses**: Implement a consistent error response format across all endpoints for better client-side handling.
+- [X] **Standardize Error Responses**: Implement a consistent error response format across all endpoints for better client-side handling.
 - [ ] **Improve Verification Access to from Auth Service to API Services**: Implement a more secure method for API Services to verify JWTs, such as using public/private key pairs instead of a shared secret.
 - [ ] **Simplify JWT Payload**: Remove sensitive data (e.g., `email`, `phone`) and the `services` array from the JWT to reduce its size and minimize data exposure risks.
 - [ ] **Maybe, Centralize Permission Checks**: Store service access and roles in a database (cached in Redis) and create an endpoint (e.g., `GET /api/v1/auth/permissions`) for services to dynamically check user access and roles.

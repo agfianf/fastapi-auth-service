@@ -126,20 +126,3 @@ def validate_password_complexity(password: str) -> tuple[bool, list[str]]:
             ls_messages.append(message)
 
     return is_valid, ls_messages
-
-
-if __name__ == "__main__":
-    # create a test for validate_password
-    my_list_test = [
-        ("Test123!", "Test123!", "testuser"),
-        ("test", "test", "testuser"),
-        ("admin", "admin", "SuperUser"),
-    ]
-
-    for pwd, pwd_con, username in my_list_test:
-        result = PasswordValidate.validate_password(
-            pwd=pwd,
-            conf_pwd=pwd_con,
-            username=username,
-        )
-        print(f"{pwd=} {username=}: {result}")
