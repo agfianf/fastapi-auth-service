@@ -44,7 +44,7 @@ async def handle_error_response(
     # Handle RequestValidationError
     elif isinstance(exc, RequestValidationError):
         errors = exc.errors()
-    
+
         if errors:
             type_error = errors[0]["type"]
             location = " in ".join(str(item) for item in errors[0]["loc"])
