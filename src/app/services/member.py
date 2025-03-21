@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from app.exceptions.member import (
     InvalidCurrentPasswordException,
     MemberNotFoundException,
-    MemberUpdateException,
     MFACodeInvalidException,
     MFANotEnabledException,
     MFAUpdateFailedException,
@@ -208,7 +207,7 @@ class MemberService:
         )
 
         if updated_member is None:
-            raise MemberUpdateException()
+            raise MemberNotFoundException()
 
         # Revoke old tokens
         self._revoke_tokens(access_token, refresh_token)

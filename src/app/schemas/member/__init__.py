@@ -1,5 +1,10 @@
 from app.schemas.member.payload import UpdateMemberPayload, UpdateMFAPayload, UpdatePasswordPayload
-from app.schemas.member.response import MemberDetailsResponse, MFAQRCodeResponse, UpdateMemberResponse
+from app.schemas.member.response import (
+    MemberDetailsResponse,
+    MFAQRCodeResponse,
+    UpdateMemberMFAResponse,
+    UpdateMemberResponse,
+)
 
 
 __all__ = [
@@ -9,4 +14,5 @@ __all__ = [
     "MemberDetailsResponse",
     "UpdateMemberResponse",
     "MFAQRCodeResponse",
+    "UpdateMemberMFAResponse",
 ]
