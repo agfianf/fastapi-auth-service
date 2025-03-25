@@ -1,4 +1,4 @@
-from sqlalchemy import Select, Update, and_, delete, func, select, update
+from sqlalchemy import Select, Update, and_, delete, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils.compat import UUID
 
@@ -253,6 +253,18 @@ class AdminStatement:
         )
         return update_stmt
 
+    @staticmethod
+    def delete_user_service_mappings(user_uuid: UUID) -> delete:
+        """Generate query to delete existing service mappings for a user."""
+        stmt = delete(service_memberships_table).where(service_memberships_table.c.user_uuid == user_uuid)
+        return stmt
+
+    @staticmethod
+    def insert_user_service_mappings(mappings: list[dict]) -> insert:
+        """Generate query to insert new service mappings for a user."""
+        stmt = insert(service_memberships_table).values(mappings)
+        return stmt
+
 
 class AdminAsyncRepositories:
     @staticmethod
@@ -412,3 +424,37 @@ class AdminAsyncRepositories:
 
         result = await connection.execute(delete_stmt)
         return result.scalar_one_or_none() == 1
+
+    @staticmethod
+    @query_exceptions_handler
+    async def update_user_services(
+        role_admin: str,  # noqa: ARG004
+        executed_by: str,
+        user_uuid: UUID,
+        services: list,
+        connection: AsyncConnection,
+    ) -> bool:
+        """Update user service mappings."""
+        # First, delete all existing mappings for this user
+        delete_stmt = AdminStatement.delete_user_service_mappings(user_uuid=user_uuid)
+        await connection.execute(delete_stmt)
+
+        # Then insert the new mappings if any are provided
+        if services:
+            values = []
+            for service in services:
+                values.append(
+                    {
+                        "user_uuid": user_uuid,
+                        "service_uuid": service.service_uuid,
+                        "role_id": service.role_id,
+                        "is_active": service.is_active,
+                        "created_by": executed_by,
+                        "updated_by": executed_by,
+                    }
+                )
+
+            insert_stmt = AdminStatement.insert_user_service_mappings(mappings=values)
+            await connection.execute(insert_stmt)
+
+        return True

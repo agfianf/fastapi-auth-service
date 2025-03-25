@@ -39,3 +39,11 @@ class SuperadminCannotUpdateSuperadminException(HTTPException):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Superadmin cannot update to superadmin.",
         )
+
+
+class UpdateUserServicesMappingFailedException(HTTPException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update user services mapping.",
+        )
