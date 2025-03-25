@@ -147,10 +147,13 @@ class AdminService:
             connection=connection,
         )
 
-        # Check permissions based on roles
+        if not user:
+            raise NoUsersFoundException()
+
+        if current_user.role == "superadmin" and user.role == "superadmin":
+            raise SuperadminCannotUpdateSuperadminException()
         if current_user.role == "admin" and user.role == "superadmin":
             raise AdminCannotUpdateSuperAdminException()
-
         if current_user.role == "admin" and user.role == "admin":
             raise AdminCannotUpdateAdminException()
 
