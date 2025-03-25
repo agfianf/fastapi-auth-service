@@ -1,6 +1,7 @@
 from enum import StrEnum
 
 from pydantic import BaseModel, Field, model_validator
+from uuid_utils.compat import UUID
 
 from app.schemas.roles.base import UserRole
 
@@ -49,3 +50,13 @@ class UpdateUserByAdminPayload(BaseModel):
             if data.get(data_key) == "":
                 data[data_key] = None
         return data
+
+
+class UserServiceMapping(BaseModel):
+    service_uuid: UUID = Field(..., description="UUID of the service")
+    role_id: int = Field(..., description="ID of the role for this service")
+    is_active: bool = Field(True, description="Whether this service mapping is active")
+
+
+class UpdateUserServicesPayload(BaseModel):
+    services: list[UserServiceMapping] = Field(..., description="List of service mappings")

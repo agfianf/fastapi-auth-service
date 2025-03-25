@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, Query, Request, Response, status
+from fastapi import APIRouter, Body, Depends, Form, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils.compat import UUID
 
@@ -9,7 +9,7 @@ from app.depedencies.database import get_async_conn, get_async_transaction_conn
 from app.depedencies.rate_limiter import default_limit, limiter
 from app.helpers.response_api import JsonResponse, MetaResponse
 from app.schemas.users import UserMembershipQueryReponse
-from app.schemas.users.admin.payload import GetUsersPayload, UpdateUserByAdminPayload
+from app.schemas.users.admin.payload import GetUsersPayload, UpdateUserByAdminPayload, UpdateUserServicesPayload
 from app.services.admin import AdminService
 
 
@@ -145,5 +145,43 @@ async def delete_user(
     return JsonResponse(
         data=None,
         message="Successfully deleted user",
+        status_code=status_code,
+    )
+
+
+@router.put(
+    "/users/{user_uuid}/services",
+    response_model=JsonResponse[None, None],
+    description="Update user service mappings.",
+)
+@limiter.limit(default_limit)
+async def update_user_services(
+    request: Request,
+    response: Response,
+    user_uuid: UUID,
+    payload: Annotated[UpdateUserServicesPayload, Body()],
+    jwt_data: Annotated[tuple[UserMembershipQueryReponse, str], PERMISSION_ADMIN],
+    connection: Annotated[AsyncConnection, Depends(get_async_transaction_conn)],
+) -> JsonResponse[None, None]:
+    """Update service mappings for a user.
+
+    - 📝 This endpoint replaces all existing service mappings for the user
+    - Each mapping consists of a service UUID, role ID, and active status
+    - A user can have multiple service mappings with different roles
+    """
+    admin_service: AdminService = request.state.admin_service
+
+    await admin_service.update_user_services(
+        current_user=jwt_data[0],
+        user_uuid=user_uuid,
+        services=payload.services,
+        connection=connection,
+    )
+
+    status_code = status.HTTP_200_OK
+    response.status_code = status_code
+    return JsonResponse(
+        data=None,
+        message="Successfully updated user service mappings",
         status_code=status_code,
     )

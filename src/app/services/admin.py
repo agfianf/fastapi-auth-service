@@ -7,6 +7,7 @@ from app.exceptions.admin import (
     FailedUpdateUserException,
     NoUsersFoundException,
     SuperadminCannotUpdateSuperadminException,
+    UpdateUserServicesMappingFailedException,
 )
 from app.helpers.response_api import MetaResponse
 from app.integrations.redis import RedisHelper
@@ -130,3 +131,39 @@ class AdminService:
             raise FailedUpdateUserException()
 
         return deleted_user
+
+    async def update_user_services(
+        self,
+        current_user: UserMembershipQueryReponse,
+        user_uuid: UUID,
+        services: list,
+        connection: AsyncConnection,
+    ) -> bool:
+        """Update user service mappings."""
+        # First, verify the user exists
+        user = await self.fetch_user_details(
+            current_user=current_user,
+            user_uuid=user_uuid,
+            connection=connection,
+        )
+
+        # Check permissions based on roles
+        if current_user.role == "admin" and user.role == "superadmin":
+            raise AdminCannotUpdateSuperAdminException()
+
+        if current_user.role == "admin" and user.role == "admin":
+            raise AdminCannotUpdateAdminException()
+
+        # Update the service mappings
+        success = await self.repo_admin.update_user_services(
+            role_admin=current_user.role,
+            executed_by=current_user.email,
+            user_uuid=user_uuid,
+            services=services,
+            connection=connection,
+        )
+
+        if not success:
+            raise UpdateUserServicesMappingFailedException()
+
+        return success

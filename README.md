@@ -73,8 +73,9 @@ The system consists of three main components:
 ### User Management (Admin) 👤
 - `GET /api/v1/admin/users`: Retrieve a list of all users (admin only).
 - `GET /api/v1/admin/users/{user_uuid}`: Get details of a specific user (admin only).
-- `PUT /api/v1/admin/users/{user_uuid}`: Update a user’s details (admin only).
+- `PUT /api/v1/admin/users/{user_uuid}`: Update a user's details (admin only).
 - `DELETE /api/v1/admin/users/{user_uuid}`: Delete a user (admin only).
+- `PUT /api/v1/admin/users/{user_uuid}/services`: Update service mappings for a user, replacing all existing mappings (admin only).
 
 ### Member Profile Management 🧑‍💻
 - `GET /api/v1/me`: Retrieve the authenticated user’s details.
