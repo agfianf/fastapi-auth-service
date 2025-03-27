@@ -2,6 +2,7 @@ from sqlalchemy import Insert, and_, insert, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.helpers.error_database import query_exceptions_handler
+from app.models.business_roles import business_roles_table
 from app.models.roles import roles_table
 from app.models.services import service_memberships_table, services_table
 from app.models.users import users_table
@@ -17,7 +18,7 @@ class AuthStatements:
     @staticmethod
     def get_user_by_username(username: str) -> select:
         # Join with roles, service_memberships, services, and roles for service memberships
-        service_roles = roles_table.alias("service_roles")
+        service_roles = business_roles_table.alias("service_roles")
 
         stmt = (
             select(
@@ -56,7 +57,7 @@ class AuthStatements:
             )  # Join to services
             .outerjoin(
                 service_roles,
-                service_memberships_table.c.role_id == service_roles.c.id,
+                service_memberships_table.c.business_role_id == service_roles.c.id,
             )  # Join to roles for service memberships
             .where(
                 and_(

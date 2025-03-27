@@ -26,14 +26,14 @@ service_memberships_table = Table(
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("user_uuid", UUID(as_uuid=True), ForeignKey("users.uuid"), nullable=False),
     Column("service_uuid", UUID(as_uuid=True), ForeignKey("services.uuid"), nullable=False),
-    Column("role_id", Integer, ForeignKey("roles.id"), nullable=False),
+    Column("business_role_id", Integer, ForeignKey("business_roles.id"), nullable=True),
     Column("is_active", Boolean, nullable=False, server_default="false"),
     *default_base_audit_junction,
 
     UniqueConstraint(
         "user_uuid",
         "service_uuid",
-        "role_id",
+        "business_role_id",
         name="uq_service_memberships_user_service_role",
     ),
 )

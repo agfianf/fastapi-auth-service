@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils.compat import UUID
 
 from app.helpers.error_database import query_exceptions_handler
+from app.models.business_roles import business_roles_table
 from app.models.roles import roles_table
 from app.models.services import service_memberships_table, services_table
 from app.models.users import users_table
@@ -14,7 +15,7 @@ class MemberStatements:
     @staticmethod
     def get_member_by_uuid(member_uuid: UUID):
         """Generate query to get member by UUID."""
-        service_roles = roles_table.alias("service_roles")
+        service_roles = business_roles_table.alias("service_roles")
         columns_select = [
             users_table.c.uuid,
             users_table.c.username,
@@ -53,7 +54,7 @@ class MemberStatements:
             )
             .outerjoin(
                 service_roles,
-                service_memberships_table.c.role_id == service_roles.c.id,
+                service_memberships_table.c.business_role_id == service_roles.c.id,
             )
         )
 

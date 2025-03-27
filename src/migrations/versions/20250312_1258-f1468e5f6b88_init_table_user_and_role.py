@@ -66,7 +66,25 @@ def upgrade() -> None:
         [
             {"name": "superadmin", "description": "Super Administrator with full access"},
             {"name": "admin", "description": "Administrator with elevated permissions"},
-            {"name": "staff", "description": "Staff with operational access"},
+            {"name": "member", "description": "Regular member with basic access"},
+        ],
+    )
+
+    business_roles_table = op.create_table(
+        "business_roles",
+        sa.Column("id", sa.Integer(), nullable=False, autoincrement=True),
+        sa.Column("name", sa.VARCHAR(225), nullable=False, unique=True),
+        sa.Column("description", sa.String(), nullable=True),
+        *generate_base_audit(),
+        sa.PrimaryKeyConstraint("id"),
+        sa.Index("ix_business_roles_name", "name"),
+    )
+
+    op.bulk_insert(
+        business_roles_table,
+        [
+            {"name": "admin", "description": "Administrator with elevated permissions"},
+            {"name": "manager", "description": "Manager with specific access"},
             {"name": "member", "description": "Regular member with basic access"},
             {"name": "guest", "description": "Guest with limited access"},
         ],
@@ -129,7 +147,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False, autoincrement=True),
         sa.Column("user_uuid", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("service_uuid", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("role_id", sa.Integer(), nullable=False),
+        sa.Column("business_role_id", sa.Integer(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="false"),
         *generate_base_audit(),
         sa.PrimaryKeyConstraint("id"),
@@ -140,9 +158,9 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
-            ["role_id"],
-            ["roles.id"],
-            name="fk_service_memberships_role_id",
+            ["business_role_id"],
+            ["business_roles.id"],
+            name="fk_service_memberships_business_role_id",
             ondelete="SET NULL",
         ),
         sa.ForeignKeyConstraint(
@@ -154,7 +172,7 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "user_uuid",
             "service_uuid",
-            "role_id",
+            "business_role_id",
             name="uq_service_memberships_user_service_role",
         ),
     )
@@ -165,4 +183,5 @@ def downgrade() -> None:
     op.drop_table("service_memberships")
     op.drop_table("services")
     op.drop_table("users")
+    op.drop_table("business_roles")
     op.drop_table("roles")

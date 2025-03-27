@@ -42,7 +42,7 @@ class UserMembership(BaseModel):
         description="Description of the user membership",
         examples=["Administrator role with full access"],
     )
-    role: str = Field(
+    role: str | None = Field(
         ...,
         description="Role of the user membership",
         examples=["admin", "user"],

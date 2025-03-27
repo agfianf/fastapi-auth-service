@@ -4,6 +4,7 @@ from uuid_utils.compat import UUID
 
 from app.helpers.error_database import query_exceptions_handler
 from app.helpers.response_api import MetaResponse
+from app.models.business_roles import business_roles_table
 from app.models.roles import roles_table
 from app.models.services import service_memberships_table, services_table
 from app.models.users import users_table
@@ -14,7 +15,7 @@ from app.schemas.users.query import UserMembershipQueryReponse
 class AdminStatement:
     @staticmethod
     def get_user_details(user_uuid: UUID, role: str):
-        service_roles = roles_table.alias("service_roles")
+        service_roles = business_roles_table.alias("service_roles")
         columns_select = [
             users_table.c.uuid,
             users_table.c.username,
@@ -50,7 +51,7 @@ class AdminStatement:
             )  # Join to services
             .outerjoin(
                 service_roles,
-                service_memberships_table.c.role_id == service_roles.c.id,
+                service_memberships_table.c.business_role_id == service_roles.c.id,
             )
         )
 
@@ -167,7 +168,7 @@ class AdminStatement:
             service_memberships_table.c.service_uuid == services_table.c.uuid,
         ).outerjoin(
             service_roles,
-            service_memberships_table.c.role_id == service_roles.c.id,
+            service_memberships_table.c.business_role_id == service_roles.c.id,
         )
 
         stmt = select(*columns_select).select_from(chain).where(service_memberships_table.c.user_uuid.in_(user_uuids))
@@ -447,7 +448,7 @@ class AdminAsyncRepositories:
                     {
                         "user_uuid": user_uuid,
                         "service_uuid": service.service_uuid,
-                        "role_id": service.role_id,
+                        "business_role_id": service.business_role_id,
                         "is_active": service.is_active,
                         "created_by": executed_by,
                         "updated_by": executed_by,
