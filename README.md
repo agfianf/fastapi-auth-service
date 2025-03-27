@@ -91,6 +91,13 @@ The system consists of three main components:
 - `PUT /api/v1/roles/{role_id}`: Update a role (admin only).
 - `DELETE /api/v1/roles/{role_id}`: Delete a role (admin only).
 
+### Business Role Management 💼
+- `GET /api/v1/business-roles`: Retrieve all business roles with pagination (admin only).
+- `POST /api/v1/business-roles`: Create a new business role (admin only).
+- `GET /api/v1/business-roles/{business_role_id}`: Get details of a specific business role (admin only).
+- `PUT /api/v1/business-roles/{business_role_id}`: Update a business role (admin only).
+- `DELETE /api/v1/business-roles/{business_role_id}`: Delete a business role (admin only).
+
 ### Service Management 🛠️
 - `GET /api/v1/services`: Retrieve all services (admin only).
 - `POST /api/v1/services`: Create a new service (admin only).

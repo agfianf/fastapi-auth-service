@@ -54,7 +54,7 @@ class UpdateUserByAdminPayload(BaseModel):
 
 class UserServiceMapping(BaseModel):
     service_uuid: UUID = Field(..., description="UUID of the service")
-    role_id: int = Field(..., description="ID of the role for this service")
+    business_role_id: int = Field(..., description="ID of the business role for this service")
     is_active: bool = Field(True, description="Whether this service mapping is active")
 
 

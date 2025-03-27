@@ -15,16 +15,19 @@ from app.integrations.redis import RedisHelper
 from app.middleware.error_response import handle_error_response
 from app.repositories.admin import AdminAsyncRepositories
 from app.repositories.auth import AuthAsyncRepositories
+from app.repositories.business_roles import BusinessRoleAsyncRepositories
 from app.repositories.member import MemberAsyncRepositories
 from app.repositories.roles import RoleAsyncRepositories
 from app.repositories.services import ServiceAsyncRepositories
 from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
+from app.routers.business_roles import router as business_roles_router
 from app.routers.member import router as member_router
 from app.routers.roles import router as roles_router
 from app.routers.services import router as services_router
 from app.services.admin import AdminService
 from app.services.auth import AuthService
+from app.services.business_roles import BusinessRoleService
 from app.services.member import MemberService
 from app.services.roles import RoleService
 from app.services.services import ServiceService
@@ -64,6 +67,13 @@ async def lifespan(app: FastAPI):  # noqa
         redis=redis,
     )
 
+    # Business Role Service
+    business_role_repo = BusinessRoleAsyncRepositories()
+    business_role_service = BusinessRoleService(
+        repo_business_roles=business_role_repo,
+        redis=redis,
+    )
+
     yield {
         "redis_helper": redis,
         "auth_service": auth_service,
@@ -71,6 +81,7 @@ async def lifespan(app: FastAPI):  # noqa
         "role_service": role_service,
         "service_service": service_service,
         "member_service": member_service,
+        "business_role_service": business_role_service,
     }
 
     print("Cleaning up resources...")
@@ -103,4 +114,5 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(member_router)
 app.include_router(roles_router)
+app.include_router(business_roles_router)
 app.include_router(services_router)

@@ -722,12 +722,12 @@ async def test_update_user_services_success(async_client, db_conn_trans, overrid
         "services": [
             {
                 "service_uuid": str(generate_uuid()),
-                "role_id": 3,  # staff role
+                "business_role_id": 3,  # staff role
                 "is_active": True,
             },
             {
                 "service_uuid": str(generate_uuid()),
-                "role_id": 4,  # user role
+                "business_role_id": 4,  # user role
                 "is_active": True,
             },
         ]
@@ -758,7 +758,7 @@ async def test_update_user_services_success(async_client, db_conn_trans, overrid
     assert str(kwargs["user_uuid"]) == user_uuid
     assert len(kwargs["services"]) == 2
     assert str(kwargs["services"][0].service_uuid) == str(payload["services"][0]["service_uuid"])
-    assert kwargs["services"][0].role_id == payload["services"][0]["role_id"]
+    assert kwargs["services"][0].business_role_id == payload["services"][0]["business_role_id"]
     assert kwargs["services"][0].is_active == payload["services"][0]["is_active"]
 
 
@@ -805,7 +805,7 @@ async def test_update_user_services_admin_to_superadmin_forbidden(async_client, 
     mock_admin_service.update_user_services.side_effect = AdminCannotUpdateSuperAdminException()
 
     user_uuid = str(generate_uuid())
-    payload = {"services": [{"service_uuid": str(generate_uuid()), "role_id": 3, "is_active": True}]}
+    payload = {"services": [{"service_uuid": str(generate_uuid()), "business_role_id": 3, "is_active": True}]}
 
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
         response = await async_client.put(
@@ -828,7 +828,7 @@ async def test_update_user_services_admin_to_admin_forbidden(async_client, db_co
     mock_admin_service.update_user_services.side_effect = AdminCannotUpdateAdminException()
 
     user_uuid = str(generate_uuid())
-    payload = {"services": [{"service_uuid": str(generate_uuid()), "role_id": 2, "is_active": True}]}
+    payload = {"services": [{"service_uuid": str(generate_uuid()), "business_role_id": 2, "is_active": True}]}
 
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
         response = await async_client.put(
@@ -851,7 +851,7 @@ async def test_update_user_services_user_not_found(async_client, db_conn_trans, 
     mock_admin_service.update_user_services.side_effect = NoUsersFoundException()
 
     user_uuid = str(generate_uuid())
-    payload = {"services": [{"service_uuid": str(generate_uuid()), "role_id": 4, "is_active": True}]}
+    payload = {"services": [{"service_uuid": str(generate_uuid()), "business_role_id": 4, "is_active": True}]}
 
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
         response = await async_client.put(
@@ -874,7 +874,7 @@ async def test_update_user_services_failure(async_client, db_conn_trans, overrid
     mock_admin_service.update_user_services.side_effect = UpdateUserServicesMappingFailedException()
 
     user_uuid = str(generate_uuid())
-    payload = {"services": [{"service_uuid": str(generate_uuid()), "role_id": 4, "is_active": True}]}
+    payload = {"services": [{"service_uuid": str(generate_uuid()), "business_role_id": 4, "is_active": True}]}
 
     with patch("starlette.datastructures.State.__getattr__", return_value=mock_admin_service):
         response = await async_client.put(
