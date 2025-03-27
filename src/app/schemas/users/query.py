@@ -43,9 +43,9 @@ class UserMembership(BaseModel):
         examples=["Administrator role with full access"],
     )
     role: str | None = Field(
-        ...,
+        None,
         description="Role of the user membership",
-        examples=["admin", "user"],
+        examples=[None, "admin", "user"],
     )
     member_is_active: bool = Field(
         ...,
