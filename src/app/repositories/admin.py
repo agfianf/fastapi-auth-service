@@ -428,6 +428,13 @@ class AdminAsyncRepositories:
 
     @staticmethod
     @query_exceptions_handler
+    async def check_business_role_exists(business_role_id: int, connection: AsyncConnection) -> bool:
+        stmt = select(business_roles_table.c.id).where(business_roles_table.c.id == business_role_id)
+        result = await connection.execute(stmt)
+        return result.scalar_one_or_none() is not None
+
+    @staticmethod
+    @query_exceptions_handler
     async def update_user_services(
         role_admin: str,  # noqa: ARG004
         executed_by: str,
@@ -444,6 +451,12 @@ class AdminAsyncRepositories:
         if services:
             values = []
             for service in services:
+                is_valid_role = await AdminAsyncRepositories.check_business_role_exists(
+                    business_role_id=service.business_role_id, connection=connection
+                )
+                if is_valid_role is False:
+                    raise ValueError(f"Business role ID {service.business_role_id} does not exist.")
+
                 values.append(
                     {
                         "user_uuid": user_uuid,
