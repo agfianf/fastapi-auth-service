@@ -151,7 +151,7 @@ class AdminStatement:
     @staticmethod
     def get_user_services(user_uuids: list[UUID]) -> Select:
         """Generate query untuk mendapatkan data service untuk user tertentu."""
-        service_roles = roles_table.alias("service_roles")
+        service_roles = business_roles_table.alias("service_roles")
 
         columns_select = [
             service_memberships_table.c.user_uuid,
