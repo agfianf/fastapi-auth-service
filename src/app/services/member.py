@@ -294,6 +294,7 @@ class MemberService:
 
         Parameters
         ----------
+
         user_uuid : str
             The UUID of the user to fetch
         connection : AsyncConnection
@@ -301,11 +302,13 @@ class MemberService:
 
         Returns
         -------
+
         UserMembershipQueryReponse
             User details
 
         Raises
         ------
+
         MemberNotFoundException
             If the user is not found
         """

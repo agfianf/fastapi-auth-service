@@ -22,7 +22,7 @@ class CreateUserQueryResponse(UserBase):
         description="Service UUID",
     )
 
-    def transform_jwt(self, role: str | None) -> dict:
+    def transform_jwt(self) -> dict:
         data = self.model_dump()
         data["uuid"] = str(data["uuid"])
         return data

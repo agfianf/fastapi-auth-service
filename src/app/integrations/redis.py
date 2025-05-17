@@ -75,6 +75,7 @@ class RedisHelper:
 
         Parameters
         ----------
+
         user_uuid : str
             The UUID of the user
         user_data : dict
@@ -94,11 +95,13 @@ class RedisHelper:
 
         Parameters
         ----------
+
         user_uuid : str
             The UUID of the user
 
         Returns
         -------
+
         dict | None
             The cached user data or None if not found
         """
@@ -113,6 +116,7 @@ class RedisHelper:
 
         Parameters
         ----------
+
         user_uuid : str
             The UUID of the user
         """

@@ -225,6 +225,7 @@ async def get_user_by_uuid(
 
     Returns
     -------
+
     JsonResponse[MemberDetailsResponse, None]
         Response containing user details
     """
