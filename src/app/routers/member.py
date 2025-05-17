@@ -205,11 +205,11 @@ async def get_user_by_uuid(
     request: Request,
     response: Response,
     user_uuid: str,
-    jwt_data: Annotated[tuple[UserMembershipQueryReponse, str], Depends(jwt_bearer)],
+    _: Annotated[tuple[UserMembershipQueryReponse, str], Depends(jwt_bearer)],  # Required for authorization
     connection: Annotated[AsyncConnection, Depends(get_async_conn)],
 ) -> JsonResponse[MemberDetailsResponse, None]:
     """Get details of a user by UUID with caching.
-    
+
     Parameters
     ----------
     request : Request
@@ -222,7 +222,7 @@ async def get_user_by_uuid(
         The JWT data of the authenticated user
     connection : AsyncConnection
         Database connection
-        
+
     Returns
     -------
     JsonResponse[MemberDetailsResponse, None]

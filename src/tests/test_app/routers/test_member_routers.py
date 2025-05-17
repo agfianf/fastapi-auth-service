@@ -480,10 +480,10 @@ async def test_get_mfa_qrcode_unauthorized(async_client, db_conn):
 async def test_get_user_by_uuid_success(async_client, db_conn, override_role_jwt_bearer):
     """Test the get_user_by_uuid endpoint when it returns data successfully."""
     user_profile, jwt_token = override_role_jwt_bearer
-    
+
     # Mock UUID
     test_uuid = str(generate_uuid())
-    
+
     # Mock data
     mock_user = {
         "uuid": test_uuid,
@@ -544,7 +544,7 @@ async def test_get_user_by_uuid_success(async_client, db_conn, override_role_jwt
 async def test_get_user_by_uuid_not_found(async_client, db_conn, override_role_jwt_bearer):
     """Test the get_user_by_uuid endpoint when the user is not found."""
     user_profile, jwt_token = override_role_jwt_bearer
-    
+
     # Mock UUID
     test_uuid = str(generate_uuid())
 
@@ -568,7 +568,7 @@ async def test_get_user_by_uuid_unauthorized(async_client, db_conn):
     """Test the get_user_by_uuid endpoint with missing authorization."""
     # Mock UUID
     test_uuid = str(generate_uuid())
-    
+
     response = await async_client.get(f"/api/v1/me/user/{test_uuid}")
 
     # Assertions

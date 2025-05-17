@@ -1,89 +1,72 @@
 from pydantic import BaseModel, Field
-from uuid_utils.compat import UUID
 
 from app.schemas.users.base import UserBase
 from app.schemas.users.payload import CreateUserPayload
 
 
 class CreateUserQuery(CreateUserPayload):
-    # transform() already implemented in PayloadUCreateUser2FA
+    service_uuid: str | None = Field(
+        default=None,
+        description="Service UUID",
+    )
 
-    mfa_secret: str | None = Field(
-        None,
-        description="MFA secret for the account",
-        examples=["JBSWY3DPEHPK3PXP"],
+    service_role: str | None = Field(
+        default=None,
+        description="Role key",
     )
 
 
 class CreateUserQueryResponse(UserBase):
-    role_id: int | None = Field(None, exclude=True)
-    password_hash: str | None = Field(None, exclude=True)
-    mfa_secret: str | None = Field(None, exclude=True)
+    service_uuid: str | None = Field(
+        default=None,
+        description="Service UUID",
+    )
 
     def transform_jwt(self, role: str | None) -> dict:
-        """Transform the user object to a JWT token payload."""
-        data = self.jwt_data(role=role)
+        data = self.model_dump()
+        data["uuid"] = str(data["uuid"])
         return data
 
 
 class UserMembership(BaseModel):
-    uuid: UUID = Field(
-        ...,
-        description="UUIDv7 of the user membership",
-        examples=["123e4567-e89b-12d3-a456-426614174000"],
+    member_uuid: str = Field(
+        title="User UUID",
+        description="User UUID",
     )
-    name: str = Field(
-        ...,
-        description="Name of the user membership",
-        examples=["Admin"],
+    service_uuid: str = Field(
+        title="Service UUID",
+        description="Service UUID",
     )
-    description: str | None = Field(
-        None,
-        description="Description of the user membership",
-        examples=["Administrator role with full access"],
-    )
-    role: str | None = Field(
-        None,
-        description="Role of the user membership",
-        examples=[None, "admin", "user"],
-    )
-    member_is_active: bool = Field(
-        ...,
-        description="Is the user membership active",
-        examples=[True],
+    role: str = Field(
+        title="Role",
+        description="Role key",
     )
     service_is_active: bool = Field(
-        ...,
-        description="Is the service active",
-        examples=[True],
+        default=True,
+        title="Service Status",
+        description="Service active status",
+    )
+    member_is_active: bool = Field(
+        default=True,
+        title="Member Status",
+        description="Member service active status",
     )
 
 
 class UserMembershipQueryReponse(UserBase):
-    """Create User Membership Query."""
-
-    role: str | None = Field(None, description="Name of the role")
-    role_id: int | None = Field(None, description="ID of the role", exclude=True)
-    password_hash: str | None = Field(None, exclude=True)
-    mfa_secret: str | None = Field(None, exclude=True)
+    role: str = Field(
+        title="Role",
+        description="Role key",
+    )
     services: list[UserMembership] = Field(
-        ...,
-        description="List of services for the user membership",
-        examples=[
-            {
-                "uuid": "123e4567-e89b-12d3-a456-426614174000",
-                "name": "Admin",
-                "description": "Administrator role with full access",
-                "role": "admin",
-                "member_is_active": True,
-                "service_is_active": True,
-            },
-        ],
+        default=[],
+        title="Services",
+        description="List of services",
     )
 
     def transform_jwt(self) -> dict:
         """Transform the user object to a JWT token payload.
-        
+
         Only includes minimal information needed for authentication:
         - UUID
         - Role
@@ -95,7 +78,7 @@ class UserMembershipQueryReponse(UserBase):
             "role": self.role,
             "sub": self.username,  # Keep 'sub' for JWT standard compliance
         }
-        
+
         # Include only service UUIDs and roles
         services_data = []
         for service in self.services:
@@ -103,7 +86,7 @@ class UserMembershipQueryReponse(UserBase):
                 "uuid": str(service["uuid"]),
                 "role": service["role"],
             })
-        
+
         data["services"] = services_data
-        
+
         return data
