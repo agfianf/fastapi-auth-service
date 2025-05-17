@@ -82,20 +82,28 @@ class UserMembershipQueryReponse(UserBase):
     )
 
     def transform_jwt(self) -> dict:
-        """Transform the user object to a JWT token payload."""
-        data = self.model_dump(
-            exclude={
-                "password_hash",
-                "mfa_secret",
-                "deleted_at",
-                "deleted_by",
-                "role_id",
-            },
-        )
-        data["uuid"] = str(data["uuid"])
-        data["created_at"] = str(data["created_at"])
-        data["updated_at"] = str(data["updated_at"])
-        for service in data["services"]:
-            service["uuid"] = str(service["uuid"])
-
+        """Transform the user object to a JWT token payload.
+        
+        Only includes minimal information needed for authentication:
+        - UUID
+        - Role
+        - Services with their roles
+        """
+        # Only include minimal information in JWT
+        data = {
+            "uuid": str(self.uuid),
+            "role": self.role,
+            "sub": self.username,  # Keep 'sub' for JWT standard compliance
+        }
+        
+        # Include only service UUIDs and roles
+        services_data = []
+        for service in self.services:
+            services_data.append({
+                "uuid": str(service["uuid"]),
+                "role": service["role"],
+            })
+        
+        data["services"] = services_data
+        
         return data

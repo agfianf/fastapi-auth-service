@@ -195,3 +195,49 @@ async def get_mfa_qrcode(
         message="MFA QR code generated successfully",
         status_code=status_code,
     )
+@router.get(
+    "/user/{user_uuid}",
+    response_model=JsonResponse[MemberDetailsResponse, None],
+    description="Get user details by UUID",
+)
+@limiter.limit(default_limit)
+async def get_user_by_uuid(
+    request: Request,
+    response: Response,
+    user_uuid: str,
+    jwt_data: Annotated[tuple[UserMembershipQueryReponse, str], Depends(jwt_bearer)],
+    connection: Annotated[AsyncConnection, Depends(get_async_conn)],
+) -> JsonResponse[MemberDetailsResponse, None]:
+    """Get details of a user by UUID with caching.
+    
+    Parameters
+    ----------
+    request : Request
+        The FastAPI request object
+    response : Response
+        The FastAPI response object
+    user_uuid : str
+        The UUID of the user to fetch
+    jwt_data : tuple[UserMembershipQueryReponse, str]
+        The JWT data of the authenticated user
+    connection : AsyncConnection
+        Database connection
+        
+    Returns
+    -------
+    JsonResponse[MemberDetailsResponse, None]
+        Response containing user details
+    """
+    member_service: MemberService = request.state.member_service
+    user = await member_service.get_user_by_uuid(
+        user_uuid=user_uuid,
+        connection=connection,
+    )
+
+    status_code = status.HTTP_200_OK
+    response.status_code = status_code
+    return JsonResponse(
+        data=user,
+        message="Successfully retrieved user details",
+        status_code=status_code,
+    )

@@ -476,3 +476,100 @@ async def test_get_mfa_qrcode_unauthorized(async_client, db_conn):
 
     # Assertions
     assert response.status_code == status.HTTP_403_FORBIDDEN
+@pytest.mark.asyncio
+async def test_get_user_by_uuid_success(async_client, db_conn, override_role_jwt_bearer):
+    """Test the get_user_by_uuid endpoint when it returns data successfully."""
+    user_profile, jwt_token = override_role_jwt_bearer
+    
+    # Mock UUID
+    test_uuid = str(generate_uuid())
+    
+    # Mock data
+    mock_user = {
+        "uuid": test_uuid,
+        "role": "member",
+        "username": "testmember",
+        "firstname": "Test",
+        "midname": "Member",
+        "lastname": "User",
+        "email": "testmember@example.com",
+        "phone": "+1234567890",
+        "telegram": "@testmember",
+        "is_active": True,
+        "mfa_enabled": False,
+        "created_at": "2025-03-17T07:12:39.919356Z",
+        "updated_at": "2025-03-17T07:12:39.919356Z",
+        "services": [
+            {
+                "uuid": str(generate_uuid()),
+                "name": "Service 1",
+                "description": "Test service",
+                "role": "member",
+                "member_is_active": True,
+                "service_is_active": True,
+            }
+        ],
+    }
+
+    # Mock the member service
+    mock_member_service = AsyncMock()
+    mock_member_service.get_user_by_uuid.return_value = MemberDetailsResponse.model_validate(mock_user)
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_member_service):
+        response = await async_client.get(
+            f"/api/v1/me/user/{test_uuid}",
+            headers={"Authorization": f"Bearer {jwt_token}"},
+        )
+
+    response_json = response.json()
+
+    # Assertions
+    assert response.status_code == status.HTTP_200_OK
+    assert response_json["status_code"] == status.HTTP_200_OK
+    assert response_json["message"] == "Successfully retrieved user details"
+
+    # Check returned data
+    assert response_json["data"]["uuid"] == test_uuid
+    assert response_json["data"]["username"] == "testmember"
+    assert response_json["data"]["role"] == "member"
+
+    # Verify mock was called with correct parameters
+    mock_member_service.get_user_by_uuid.assert_called_once_with(
+        user_uuid=test_uuid,
+        connection=db_conn,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_user_by_uuid_not_found(async_client, db_conn, override_role_jwt_bearer):
+    """Test the get_user_by_uuid endpoint when the user is not found."""
+    user_profile, jwt_token = override_role_jwt_bearer
+    
+    # Mock UUID
+    test_uuid = str(generate_uuid())
+
+    # Mock the member service to raise MemberNotFoundException
+    mock_member_service = AsyncMock()
+    mock_member_service.get_user_by_uuid.side_effect = MemberNotFoundException()
+
+    with patch("starlette.datastructures.State.__getattr__", return_value=mock_member_service):
+        response = await async_client.get(
+            f"/api/v1/me/user/{test_uuid}",
+            headers={"Authorization": f"Bearer {jwt_token}"},
+        )
+
+    # Assertions
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["message"] == "Member not found"
+
+
+@pytest.mark.asyncio
+async def test_get_user_by_uuid_unauthorized(async_client, db_conn):
+    """Test the get_user_by_uuid endpoint with missing authorization."""
+    # Mock UUID
+    test_uuid = str(generate_uuid())
+    
+    response = await async_client.get(f"/api/v1/me/user/{test_uuid}")
+
+    # Assertions
+    assert response.status_code == status.HTTP_403_FORBIDDEN

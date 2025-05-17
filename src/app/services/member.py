@@ -94,6 +94,9 @@ class MemberService:
 
         if not success:
             raise PasswordUpdateFailedException()
+            
+        # Invalidate user cache
+        self.redis.invalidate_user_cache(user_uuid=str(member.uuid))
 
         # Revoke old tokens
         self._revoke_tokens(access_token, refresh_token)
@@ -166,6 +169,9 @@ class MemberService:
 
         if not success:
             raise MFAUpdateFailedException()
+            
+        # Invalidate user cache
+        self.redis.invalidate_user_cache(user_uuid=str(member.uuid))
 
         # Revoke old tokens
         self._revoke_tokens(access_token, refresh_token)
@@ -208,6 +214,9 @@ class MemberService:
 
         if updated_member is None:
             raise MemberNotFoundException()
+            
+        # Invalidate user cache
+        self.redis.invalidate_user_cache(user_uuid=str(current_user.uuid))
 
         # Revoke old tokens
         self._revoke_tokens(access_token, refresh_token)
@@ -276,3 +285,48 @@ class MemberService:
                         token=refresh_token,
                         expire_sec=expiry_refresh_sec,
                     )
+    async def get_user_by_uuid(
+        self,
+        user_uuid: str,
+        connection: AsyncConnection,
+    ) -> UserMembershipQueryReponse:
+        """Get user details by UUID with caching.
+        
+        Parameters
+        ----------
+        user_uuid : str
+            The UUID of the user to fetch
+        connection : AsyncConnection
+            Database connection
+            
+        Returns
+        -------
+        UserMembershipQueryReponse
+            User details
+            
+        Raises
+        ------
+        MemberNotFoundException
+            If the user is not found
+        """
+        # Try to get from cache first
+        cached_user = self.redis.get_cached_user_details(user_uuid=user_uuid)
+        if cached_user:
+            return UserMembershipQueryReponse.model_validate(cached_user)
+            
+        # If not in cache, fetch from database
+        user = await self.repo_member.get_member_by_uuid(
+            connection=connection,
+            member_uuid=user_uuid,
+        )
+        
+        if user is None:
+            raise MemberNotFoundException()
+            
+        # Cache the result
+        self.redis.cache_user_details(
+            user_uuid=str(user.uuid),
+            user_data=user.model_dump(),
+        )
+        
+        return user
