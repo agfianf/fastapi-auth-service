@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from uuid_utils.compat import UUID
 
 from app.schemas.users.base import UserBase
@@ -57,6 +57,25 @@ class UserMembership(BaseModel):
         description="Is the service active",
         examples=[True],
     )
+
+
+class UserTokenVerifyResponse(BaseModel):
+    uuid: UUID
+    username: str
+    email: EmailStr
+    firstname: str
+    midname: str | None
+    lastname: str | None
+    phone: str | None
+    telegram: str | None
+    role: str | None
+    is_active: bool
+    mfa_enabled: bool
+    service_id: UUID
+    service_name: str
+    service_valid: bool
+    service_role: str | None
+    service_status: str | None
 
 
 class UserMembershipQueryReponse(UserBase):

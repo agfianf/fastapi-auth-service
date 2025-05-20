@@ -2,15 +2,25 @@ import time
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncConnection
+from uuid_utils import UUID
 
 from app.config import settings
-from app.exceptions.auth import AlreadySignedOutException, RefreshTokenNotFoundException, SessionExpiredException
+from app.exceptions.auth import (
+    AlreadySignedOutException,
+    InactiveUserException,
+    InvalidTokenException,
+    RefreshTokenNotFoundException,
+    SessionExpiredException,
+    TokenRevokedException,
+    UserNotRegisteredOnTargetedService,
+)
 from app.helpers.auth import create_access_token, decode_access_jwt, decode_refresh_jwt
 from app.helpers.generator_jwt import generate_delete_refresh_cookies, generate_jwt_tokens, generate_temporary_mfa_token
 from app.helpers.user_validator import verify_mfa_credentials, verify_user_password, verify_user_status
 from app.integrations.mfa import TwoFactorAuth
 from app.integrations.redis import RedisHelper
 from app.repositories.auth import AuthAsyncRepositories
+from app.repositories.member import MemberAsyncRepositories
 from app.schemas.users import (
     CreateUserPayload,
     CreateUserQuery,
@@ -18,6 +28,7 @@ from app.schemas.users import (
     SignInPayload,
     SignInResponse,
     UserMembershipQueryReponse,
+    UserTokenVerifyResponse,
     VerifyMFAResponse,
 )
 from app.schemas.users.response import AccessTokenResponse
@@ -27,10 +38,85 @@ class AuthService:
     def __init__(
         self,
         repo_auth: AuthAsyncRepositories,
+        repo_member: MemberAsyncRepositories,
         redis: RedisHelper,
     ) -> None:
         self.repo_auth = repo_auth
+        self.repo_member = repo_member
         self.redis = redis
+
+    async def verify_token(self, token: str, service_id: UUID, connection: AsyncConnection) -> UserTokenVerifyResponse:
+        """Verify the token and return a success message."""
+        is_creds_revoked = self.redis.is_token_revoked(token)
+
+        if is_creds_revoked:
+            raise TokenRevokedException()
+
+        key_user_details = f"jwt_verify:{token}:{service_id}"
+        self.redis.get_data(key_user_details)
+
+        decoded_jwt = decode_access_jwt(token=token)
+        if decoded_jwt is None:
+            raise InvalidTokenException()
+
+        user_uuid = decoded_jwt.get("sub")
+        user_profile: UserMembershipQueryReponse = await self.repo_member.get_member_by_uuid(
+            member_uuid=user_uuid,
+            connection=connection,
+        )
+
+        if not user_profile.is_active:
+            raise InactiveUserException()
+
+        is_registered_service = False
+        service_user_role = None
+        service_user_status = None
+        service_name = None
+
+        for service_user in user_profile.services:
+            if is_registered_service:
+                break
+            if str(service_user.service_id) == str(service_id):
+                if service_user.service_is_active is False:
+                    raise InactiveUserException()
+                is_registered_service = True
+                service_user_role = service_user.role
+                service_user_status = service_user.member_is_active
+                service_name = service_user.name
+
+        if not is_registered_service:
+            raise UserNotRegisteredOnTargetedService()
+
+        # ! until here, all verification is done and user is valid
+        data = {
+            "uuid": user_profile.uuid,
+            "username": user_profile.username,
+            "email": user_profile.email,
+            "firstname": user_profile.firstname,
+            "midname": user_profile.midname,
+            "lastname": user_profile.lastname,
+            "phone": user_profile.phone,
+            "telegram": user_profile.telegram,
+            "role": user_profile.role,
+            "is_active": user_profile.is_active,
+            "mfa_enabled": user_profile.mfa_enabled,
+            "service_id": service_id,
+            "service_valid": is_registered_service,
+            "service_name": service_name,
+            "service_role": service_user_role,
+            "service_status": service_user_status,
+        }
+
+        time_now = time.time()
+        expire_time = decoded_jwt.get("exp", 0) - time_now
+
+        self.redis.set_data(
+            key=key_user_details,
+            value=data,
+            expire_sec=expire_time,
+        )
+
+        return UserTokenVerifyResponse(**data)
 
     async def sign_up(
         self,
