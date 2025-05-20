@@ -96,11 +96,13 @@ def generate_jwt_tokens(
     timenow = time.time()
     jwt_access_data = {
         **user_data,
-        "expire_time": timenow + (60 * expire_minutes_access),
+        "exp": timenow + (60 * expire_minutes_access),
+        "iat": timenow,
     }
     jwt_refresh_data = {
         **user_data,
-        "expire_time": timenow + (60 * expire_minutes_refresh),
+        "exp": timenow + (60 * expire_minutes_refresh),
+        "iat": timenow,
     }
 
     access_token = create_access_token(data=jwt_access_data)

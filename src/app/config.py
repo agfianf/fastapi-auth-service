@@ -47,7 +47,7 @@ class Settings(BaseSettings):
 
     AUTH_SECRET_REFRESH: str = "refresh_secret"
     AUTH_ALGORTIHM_REFRESH: str = "HS256"
-    AUTH_TOKEN_REFRESH_EXPIRE_MINUTES: int = 120
+    AUTH_TOKEN_REFRESH_EXPIRE_MINUTES: int = 24 * 60
 
     NAME_APP_2FA: str = "Auth Service"
 

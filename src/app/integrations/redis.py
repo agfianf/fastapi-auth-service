@@ -1,3 +1,5 @@
+import json
+
 from redis import Redis
 
 from app.config import settings
@@ -17,11 +19,13 @@ class RedisHelper:
     def set_data(
         self,
         key: str,
-        value: str | float | bool,
+        value: str | float | bool | dict | list,
         expire_sec: int | None = None,
     ) -> None:
         if isinstance(value, bool):
             value = int(value)
+        elif isinstance(value, dict | list):
+            value = json.dumps(value)
 
         if expire_sec is None:
             self.redis.set(
@@ -45,10 +49,15 @@ class RedisHelper:
             decoded_value = bool(decoded_value)
         return decoded_value
 
-    def get_data(self, key: str) -> str | None:
+    def get_data(self, key: str) -> str | dict | list | None:
         value = self.redis.get(key)
         if value is not None:
             value = value.decode("utf-8")
+            try:
+                # Attempt to parse JSON, fallback to string if not JSON
+                return json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                return value
         return value
 
     def add_token_to_blacklist(

@@ -81,6 +81,30 @@ class UserMembershipQueryReponse(UserBase):
         ],
     )
 
+    def to_redis_dict(self) -> dict:
+        """Transform the user object to a dictionary for Redis."""
+        data = self.model_dump(
+            exclude={
+                "password_hash",
+                "mfa_secret",
+                "deleted_at",
+                "deleted_by",
+                "role_id",
+            },
+        )
+        data["uuid"] = str(data["uuid"])
+        data["created_at"] = str(data["created_at"])
+        data["updated_at"] = str(data["updated_at"])
+        for service in data["services"]:
+            service["uuid"] = str(service["uuid"])
+
+        return data
+
+    def transform_jwt_v2(self) -> dict:
+        return {
+            "sub": str(self.uuid),
+        }
+
     def transform_jwt(self) -> dict:
         """Transform the user object to a JWT token payload."""
         data = self.model_dump(

@@ -76,7 +76,7 @@ class AuthService:
         if curr_user.mfa_enabled:
             temp_token = generate_temporary_mfa_token(
                 redis=self.redis,
-                user_data=curr_user.model_dump(include={"username"}),
+                user_data=curr_user.transform_jwt_v2(),
                 expire_minutes=3,
             )
 
@@ -88,9 +88,9 @@ class AuthService:
             return signin_response, None
 
         access_token, cookies = generate_jwt_tokens(
-            user_data=curr_user.transform_jwt(),
-            expire_minutes_access=15,
-            expire_minutes_refresh=60 * 24,
+            user_data=curr_user.transform_jwt_v2(),
+            expire_minutes_access=settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES,
+            expire_minutes_refresh=settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES,
         )
 
         signin_response = SignInResponse(
@@ -170,8 +170,8 @@ class AuthService:
 
         access_token, cookies = generate_jwt_tokens(
             user_data=user.transform_jwt(),
-            expire_minutes_access=15,
-            expire_minutes_refresh=60 * 24,
+            expire_minutes_access=settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES,
+            expire_minutes_refresh=settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES,
         )
 
         return VerifyMFAResponse(access_token=access_token), cookies
