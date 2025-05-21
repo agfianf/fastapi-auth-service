@@ -10,6 +10,7 @@ from app.exceptions.auth import (
     InactiveUserException,
     InvalidTokenException,
     RefreshTokenNotFoundException,
+    ServiceInactiveUserException,
     SessionExpiredException,
     TokenRevokedException,
     UserNotRegisteredOnTargetedService,
@@ -55,6 +56,7 @@ class AuthService:
         key_user_details = f"jwt_verify:{token}:{service_id}"
         self.redis.get_data(key_user_details)
 
+        # 1. Verify token is valid
         decoded_jwt = decode_access_jwt(token=token)
         if decoded_jwt is None:
             raise InvalidTokenException()
@@ -65,6 +67,7 @@ class AuthService:
             connection=connection,
         )
 
+        # 2. Check is user is active
         if not user_profile.is_active:
             raise InactiveUserException()
 
@@ -84,8 +87,13 @@ class AuthService:
                 service_user_status = service_user.member_is_active
                 service_name = service_user.name
 
+        # 3. Check if user is registered on the targeted service
         if not is_registered_service:
             raise UserNotRegisteredOnTargetedService()
+
+        # 4. Check if user is active on the targeted service
+        if service_user_status is False:
+            raise ServiceInactiveUserException()
 
         # ! until here, all verification is done and user is valid
         data = {

@@ -85,6 +85,14 @@ class InactiveUserException(HTTPException):
         )
 
 
+class ServiceInactiveUserException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: User account is inactive for this service",
+        )
+
+
 class TokenRevokedException(HTTPException):
     def __init__(self):
         super().__init__(
