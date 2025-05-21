@@ -9,7 +9,7 @@ services:
     container_name: auth-service
     working_dir: /code/src
     ports:
-      - "8123:8000"
+      - "18100:8000"
     env_file:
       - ./src/app/.env.example
     environment:
@@ -41,7 +41,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=auth_db
     ports:
-      - "8124:5432"
+      - "18101:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -55,8 +55,8 @@ services:
     container_name: redis-auth
     image: redis/redis-stack:7.2.0-v11
     ports:
-      - "18002:6379" # api
-      - "18003:8001" # dashboard
+      - "18103:6379" # api
+      - "18104:8001" # dashboard
     restart: unless-stopped
     healthcheck:
       interval: 5s

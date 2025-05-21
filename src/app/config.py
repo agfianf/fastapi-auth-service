@@ -41,10 +41,10 @@ class Settings(BaseSettings):
     AUTH_DEFAULT_ADMIN_PASSWORD: str = "admiN123456789?"
     AUTH_SALT_PHRASE: str = "defaultsalt"
     AUTH_ROUNDS: int = 1001
-    AUTH_SECRET_ACCESS: str = "access_secret"
     AUTH_ALGORITHM_ACCESS: str = "HS256"
     AUTH_TOKEN_ACCESS_EXPIRE_MINUTES: int = 30
 
+    AUTH_SECRET_ACCESS: str = "access_secret"
     AUTH_SECRET_REFRESH: str = "refresh_secret"
     AUTH_ALGORTIHM_REFRESH: str = "HS256"
     AUTH_TOKEN_REFRESH_EXPIRE_MINUTES: int = 120
