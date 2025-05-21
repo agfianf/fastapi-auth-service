@@ -10,13 +10,16 @@ The **Auth Service** is a microservice responsible for handling user authenticat
 The system consists of three main components:
 - **Frontend (A)**: The client application where users log in, sign up, or access protected resources.
 - **Auth Service**: The core service that manages authentication, issues JWTs, and enforces RBAC.
-- **API Services (B)**: Backend services that provide protected resources, accessible using JWTs issued by the Auth Service.
+- **API Services (B)**: Backend services that provide protected resources, accessible using JWTs issued by the Auth Service. These services verify the JWTs via `POST /api/v1/auth/verify-token` endpoint to check user access and roles.
 
 ### 🚀 Usage Scenario
 1. A user logs in via the frontend by sending credentials to the Auth Service.
 2. The Auth Service validates the credentials and issues a JWT containing the user’s details and a list of accessible services with their roles.
 3. The frontend sends the JWT to an API Service to access a protected resource.
-4. The API Service verifies the JWT using a shared secret and checks if its own service UUID is in the JWT’s `services` array, along with the user’s role for that service.
+4. The API Services verifies the JWT using a `POST /api/v1/auth/verify-token` endpoint by give passing token jwt from the frontend and the service UUID.
+   - The Auth Service checks the token's validity, expiration, and revocation status.
+   - It also verifies if the user has access to the requested service and role.
+   - The Auth Service returns the user details and service access information.
 5. If the token is valid and the user has access, the API Service grants the request; otherwise, it denies it.
 6. Revoked tokens (e.g., after sign-out) are stored in Redis, accessible to all services for blacklist checks.
 
