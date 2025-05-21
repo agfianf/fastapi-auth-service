@@ -46,8 +46,9 @@ def get_data_user_admin_valid_wo_mfa() -> tuple[UserMembershipQueryReponse, str]
     data["role"] = "admin"
 
     data_jwt = {
-        **data,
-        "expire_time": timenow + (60 * expire_minutes_access),
+        "sub": data["uuid"],
+        "exp": timenow + (60 * expire_minutes_access),
+        "iat": timenow,
     }
     user_valid_jwt = create_access_token(data=data_jwt)
 
@@ -64,8 +65,9 @@ def get_data_user_superadmin_valid() -> tuple[UserMembershipQueryReponse, str]:
     data["mfa_enabled"] = True
 
     data_jwt = {
-        **data,
-        "expire_time": timenow + (60 * expire_minutes_access),
+        "sub": data["uuid"],
+        "exp": timenow + (60 * expire_minutes_access),
+        "iat": timenow,
     }
     user_valid_jwt = create_access_token(data=data_jwt)
 

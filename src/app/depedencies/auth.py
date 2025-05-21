@@ -52,6 +52,9 @@ class JWTBearer(HTTPBearer):
         token_jwt = credentials.credentials
         decoded_jwt = decode_access_jwt(token_jwt)
 
+        if decoded_jwt is None:
+            raise InvalidTokenException()
+
         user_profile = await member_service.fetch_member_details(
             user_uid=decoded_jwt["sub"],
             connection=connection,
