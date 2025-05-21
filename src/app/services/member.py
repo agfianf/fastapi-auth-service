@@ -48,16 +48,16 @@ class MemberService:
             member_uuid=user_uid,
         )
 
+        if member is None:
+            if ignore_error:
+                return None
+            raise MemberNotFoundException()
+
         self.redis.set_data(
             key=user_cache_key,
             value=member.to_redis_dict(),
             expire_sec=3600,  # 1 hour
         )
-
-        if member is None:
-            if ignore_error:
-                return None
-            raise MemberNotFoundException()
 
         return member
 
