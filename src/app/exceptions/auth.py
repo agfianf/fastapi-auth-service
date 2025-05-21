@@ -101,6 +101,14 @@ class InsufficientPermissionsException(HTTPException):
         )
 
 
+class UserNotRegisteredOnTargetedService(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: User is not registered on this service",
+        )
+
+
 # MFA exceptions
 class MFAAlreadyEnabledException(HTTPException):
     def __init__(self):

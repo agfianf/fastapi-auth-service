@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from uuid_utils.compat import UUID
 
 from app.schemas.users.base import UserBase
@@ -59,6 +59,25 @@ class UserMembership(BaseModel):
     )
 
 
+class UserTokenVerifyResponse(BaseModel):
+    uuid: UUID
+    username: str
+    email: EmailStr
+    firstname: str
+    midname: str | None
+    lastname: str | None
+    phone: str | None
+    telegram: str | None
+    role: str | None
+    is_active: bool
+    mfa_enabled: bool
+    service_id: UUID
+    service_name: str
+    service_valid: bool
+    service_role: str | None
+    service_status: str | None
+
+
 class UserMembershipQueryReponse(UserBase):
     """Create User Membership Query."""
 
@@ -80,6 +99,30 @@ class UserMembershipQueryReponse(UserBase):
             },
         ],
     )
+
+    def to_redis_dict(self) -> dict:
+        """Transform the user object to a dictionary for Redis."""
+        data = self.model_dump(
+            exclude={
+                "password_hash",
+                "mfa_secret",
+                "deleted_at",
+                "deleted_by",
+                "role_id",
+            },
+        )
+        data["uuid"] = str(data["uuid"])
+        data["created_at"] = str(data["created_at"])
+        data["updated_at"] = str(data["updated_at"])
+        for service in data["services"]:
+            service["uuid"] = str(service["uuid"])
+
+        return data
+
+    def transform_jwt_v2(self) -> dict:
+        return {
+            "sub": str(self.uuid),
+        }
 
     def transform_jwt(self) -> dict:
         """Transform the user object to a JWT token payload."""

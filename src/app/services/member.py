@@ -1,5 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncConnection
+from uuid_utils.compat import UUID
 
+from app.config import settings
 from app.exceptions.member import (
     InvalidCurrentPasswordException,
     MemberNotFoundException,
@@ -30,17 +32,32 @@ class MemberService:
 
     async def fetch_member_details(
         self,
-        current_user: UserMembershipQueryReponse,
+        user_uid: UUID,
         connection: AsyncConnection,
+        ignore_error: bool = False,
     ) -> UserMembershipQueryReponse:
         """Get member details."""
+        user_cache_key = f"member:{str(user_uid)}"
+        data_cache = self.redis.get_data(user_cache_key)
+
+        if data_cache is not None:
+            return UserMembershipQueryReponse(**data_cache)
+
         member = await self.repo_member.get_member_by_uuid(
             connection=connection,
-            member_uuid=current_user.uuid,
+            member_uuid=user_uid,
         )
 
         if member is None:
+            if ignore_error:
+                return None
             raise MemberNotFoundException()
+
+        self.redis.set_data(
+            key=user_cache_key,
+            value=member.to_redis_dict(),
+            expire_sec=3600,  # 1 hour
+        )
 
         return member
 
@@ -106,9 +123,9 @@ class MemberService:
 
         # Generate new tokens
         new_access_token, cookies = generate_jwt_tokens(
-            user_data=updated_member.transform_jwt(),
-            expire_minutes_access=15,
-            expire_minutes_refresh=60 * 24,
+            user_data=updated_member.transform_jwt_v2(),
+            expire_minutes_access=settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES,
+            expire_minutes_refresh=settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES,
         )
 
         return UpdateMemberResponse(
@@ -178,9 +195,9 @@ class MemberService:
 
         # Generate new tokens
         new_access_token, cookies = generate_jwt_tokens(
-            user_data=updated_member.transform_jwt(),
-            expire_minutes_access=15,
-            expire_minutes_refresh=60 * 24,
+            user_data=updated_member.transform_jwt_v2(),
+            expire_minutes_access=settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES,
+            expire_minutes_refresh=settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES,
         )
 
         return UpdateMemberMFAResponse(
@@ -214,9 +231,9 @@ class MemberService:
 
         # Generate new tokens
         new_access_token, cookies = generate_jwt_tokens(
-            user_data=updated_member.transform_jwt(),
-            expire_minutes_access=15,
-            expire_minutes_refresh=60 * 24,
+            user_data=updated_member.transform_jwt_v2(),
+            expire_minutes_access=settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES,
+            expire_minutes_refresh=settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES,
         )
 
         return UpdateMemberResponse(

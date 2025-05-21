@@ -3,7 +3,9 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncConnection
 
+from app.depedencies.database import get_async_conn
 from app.exceptions.auth import (
     InactiveUserException,
     InsufficientPermissionsException,
@@ -16,6 +18,7 @@ from app.helpers.auth import decode_access_jwt
 from app.integrations.redis import RedisHelper
 from app.schemas.roles.base import UserRole
 from app.schemas.users import UserMembershipQueryReponse
+from app.services.member import MemberService
 
 
 # Constants
@@ -29,9 +32,11 @@ class JWTBearer(HTTPBearer):
     async def __call__(
         self,
         request: Request,
+        connection: Annotated[AsyncConnection, Depends(get_async_conn)],
     ) -> tuple[UserMembershipQueryReponse, str]:
         credentials = await super().__call__(request)
         redis_helper: RedisHelper = request.state.redis_helper
+        member_service: MemberService = request.state.member_service
 
         if not credentials:
             raise InvalidCredentialsHeaderException()
@@ -39,18 +44,26 @@ class JWTBearer(HTTPBearer):
         if credentials.scheme != AUTH_SCHEME:
             raise InvalidCredentialsSchemeException()
 
-        token_jwt = credentials.credentials
-        user_profile = decode_access_jwt(token_jwt)
-
-        if user_profile is None:
-            raise InvalidTokenException()
-
         is_creds_revoked = redis_helper.is_token_revoked(credentials.credentials)
 
         if is_creds_revoked:
+            print("Token revoked in Redis by JWTBearer")
             raise TokenRevokedException()
 
-        user_profile = UserMembershipQueryReponse(**user_profile)
+        token_jwt = credentials.credentials
+        decoded_jwt = decode_access_jwt(token_jwt)
+
+        if decoded_jwt is None:
+            raise InvalidTokenException()
+
+        user_profile = await member_service.fetch_member_details(
+            user_uid=decoded_jwt["sub"],
+            connection=connection,
+            ignore_error=True,
+        )
+
+        if user_profile is None:
+            raise InvalidTokenException()
 
         if not user_profile.is_active:
             raise InactiveUserException()

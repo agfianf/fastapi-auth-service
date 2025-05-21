@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, Form, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncConnection
+from uuid_utils.compat import UUID
 
 from app.depedencies.auth import JWTBearer
 from app.depedencies.database import get_async_conn, get_async_transaction_conn
@@ -16,6 +17,7 @@ from app.schemas.users import (
     SignInPayload,
     SignInResponse,
     UserMembershipQueryReponse,
+    UserTokenVerifyResponse,
     VerifyMFAResponse,
 )
 from app.schemas.users.response import AccessTokenResponse
@@ -26,6 +28,27 @@ router = APIRouter(
     prefix="/api/v1/auth",
     tags=["Authentication"],
 )
+
+
+@router.post("/verify-token", response_model=JsonResponse[UserTokenVerifyResponse, None])
+async def verify_token(
+    request: Request,
+    jwt_token: Annotated[str, Form(...)],
+    service_id: Annotated[UUID, Form(...)],
+    connection: Annotated[AsyncConnection, Depends(get_async_conn)],
+) -> JsonResponse[UserTokenVerifyResponse, None]:
+    """Verify the token and return a success message."""
+    auth_service: AuthService = request.state.auth_service
+    data_user = await auth_service.verify_token(
+        token=jwt_token,
+        service_id=service_id,
+        connection=connection,
+    )
+    return JsonResponse(
+        data=data_user,
+        message="Token is valid",
+        status_code=status.HTTP_200_OK,
+    )
 
 
 @router.post(

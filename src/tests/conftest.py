@@ -24,7 +24,7 @@ async def async_client():
         yield client
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(autouse=True)
 async def db_conn_trans():
     """Fixture to mocking database connection for transaction tests.
 
@@ -41,7 +41,7 @@ async def db_conn_trans():
     app.dependency_overrides.pop(get_async_transaction_conn, None)
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(autouse=True)
 async def db_conn():
     """Fixture to mocking database connection for non-transaction tests.
 

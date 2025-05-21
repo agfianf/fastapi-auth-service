@@ -41,7 +41,7 @@ async def get_member_details(
     """Get details of the currently authenticated member."""
     member_service: MemberService = request.state.member_service
     member = await member_service.fetch_member_details(
-        current_user=jwt_data[0],
+        user_uid=jwt_data[0].uuid,
         connection=connection,
     )
 

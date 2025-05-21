@@ -38,9 +38,12 @@ async def lifespan(app: FastAPI):  # noqa
     print("Initializing resources...")
     # integration
     redis = RedisHelper()
+    member_repo = MemberAsyncRepositories()
+    auth_repo = AuthAsyncRepositories()
 
     auth_service = AuthService(
-        repo_auth=AuthAsyncRepositories,
+        repo_auth=auth_repo,
+        repo_member=member_repo,
         redis=redis,
     )
 
@@ -61,7 +64,6 @@ async def lifespan(app: FastAPI):  # noqa
         redis=redis,
     )
 
-    member_repo = MemberAsyncRepositories()
     member_service = MemberService(
         repo_member=member_repo,
         redis=redis,
