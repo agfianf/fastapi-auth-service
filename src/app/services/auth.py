@@ -76,7 +76,7 @@ class AuthService:
         for service_user in user_profile.services:
             if is_registered_service:
                 break
-            if str(service_user.service_id) == str(service_id):
+            if str(service_user.uuid) == str(service_id):
                 if service_user.service_is_active is False:
                     raise InactiveUserException()
                 is_registered_service = True
@@ -106,17 +106,20 @@ class AuthService:
             "service_role": service_user_role,
             "service_status": service_user_status,
         }
+        print(f"Decoded JWT: {data}")
 
         time_now = time.time()
-        expire_time = decoded_jwt.get("exp", 0) - time_now
+        expire_time = int(decoded_jwt.get("exp", 0) - time_now)
+
+        result = UserTokenVerifyResponse(**data)
 
         self.redis.set_data(
             key=key_user_details,
-            value=data,
+            value=result.to_redis_dict(),
             expire_sec=expire_time,
         )
 
-        return UserTokenVerifyResponse(**data)
+        return result
 
     async def sign_up(
         self,

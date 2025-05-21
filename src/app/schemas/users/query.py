@@ -75,7 +75,24 @@ class UserTokenVerifyResponse(BaseModel):
     service_name: str
     service_valid: bool
     service_role: str | None
-    service_status: str | None
+    service_status: bool | None
+
+    def to_redis_dict(self) -> dict:
+        """Transform the user object to a dictionary for Redis."""
+        data = self.model_dump(
+            exclude={
+                "password_hash",
+                "mfa_secret",
+                "deleted_at",
+                "deleted_by",
+                "role_id",
+            },
+        )
+        data["uuid"] = str(data["uuid"])
+        if self.service_id:
+            data["service_id"] = str(self.service_id)
+
+        return data
 
 
 class UserMembershipQueryReponse(UserBase):
