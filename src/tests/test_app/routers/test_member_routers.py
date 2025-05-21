@@ -74,7 +74,7 @@ async def test_get_member_details_success(async_client, db_conn, override_role_j
 
     # Verify mock was called with correct parameters
     mock_member_service.fetch_member_details.assert_called_once_with(
-        current_user=user_profile,
+        user_uid=user_profile.uuid,
         connection=db_conn,
     )
 

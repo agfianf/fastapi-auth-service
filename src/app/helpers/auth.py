@@ -59,7 +59,7 @@ def decode_jwt(token: str, type_jwt: Literal["access", "refresh"] = "access") ->
 def decode_access_jwt(token: str) -> dict | None:
     try:
         decoded_token = decode_jwt(token=token)
-        exp_time = decoded_token.get("expire_time", None)
+        exp_time = decoded_token.get("exp", None)
         return decoded_token if exp_time >= time.time() else None
     except Exception:
         return None
@@ -68,7 +68,7 @@ def decode_access_jwt(token: str) -> dict | None:
 def decode_refresh_jwt(token: str) -> dict:
     try:
         decoded_token = decode_jwt(token=token, type_jwt="refresh")
-        exp_time = decoded_token.get("expire_time", None)
+        exp_time = decoded_token.get("exp", None)
         return decoded_token if exp_time >= time.time() else None
     except Exception:
         return {}
