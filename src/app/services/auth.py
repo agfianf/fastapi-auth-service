@@ -202,8 +202,8 @@ class AuthService:
             raise AlreadySignedOutException()
 
         timenow = time.time()
-        expiry_access_sec = int(data_access.get("expire_time", 0) - timenow)
-        expiry_refresh_sec = int(data_refresh.get("expire_time", 0) - timenow)
+        expiry_access_sec = int(data_access.get("exp", 0) - timenow)
+        expiry_refresh_sec = int(data_refresh.get("exp", 0) - timenow)
 
         is_access_token_revoked = self.redis.is_token_revoked(token=access_token)
         is_refresh_token_revoked = self.redis.is_token_revoked(token=refresh_token_app)
@@ -228,7 +228,6 @@ class AuthService:
 
         delete_cookie = generate_delete_refresh_cookies()
 
-        print(f"delete_cookie: {delete_cookie}")
         return {
             "access_token_revoked": True,
             "refresh_token_revoked": True,

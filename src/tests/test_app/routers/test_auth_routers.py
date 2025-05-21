@@ -249,7 +249,8 @@ async def test_sign_in(async_client, db_conn, signin_payload, mock_return, expec
 
 
 @pytest.mark.asyncio
-async def test_sign_out(async_client):  # noqa: ARG001
+async def test_sign_out(async_client, override_role_jwt_bearer):
+    user_profile, jwt_token = override_role_jwt_bearer
     # Setup client dengan cookies
     async_client.cookies.set("refresh_token_app", "mock_refresh_token")
 
@@ -259,7 +260,6 @@ async def test_sign_out(async_client):  # noqa: ARG001
 
     # Setup mock data
     mock_delete_cookies = {"key": "refresh_token_app", "value": "", "httponly": True, "max_age": 0}
-    mock_jwt_data = ({"user_data": "test"}, "mock_access_token")
     mock_is_revoked = {"access_token": True, "refresh_token": True}
 
     # Mock the auth service
@@ -270,17 +270,18 @@ async def test_sign_out(async_client):  # noqa: ARG001
 
     # Mock the JWT bearer dependency
     with (
-        patch("app.depedencies.auth.JWTBearer.__call__", return_value=mock_jwt_data),
         patch("starlette.datastructures.State.__getattr__", return_value=mock_auth_service),
         patch("fastapi.responses.Response.delete_cookie", mock_response_delete_cookies),
     ):
         # Make the request with a cookie
         response = await async_client.delete(
             "/api/v1/auth/sign-out",
-            headers={"Authorization": "Bearer mock_access_token"},
+            headers={"Authorization": f"Bearer {jwt_token}"},
         )
 
     response_json = response.json()
+    print(response_json)
+    print(response.status_code)
 
     # Assertions
     assert response.status_code == status.HTTP_200_OK
@@ -290,7 +291,7 @@ async def test_sign_out(async_client):  # noqa: ARG001
 
     # Verify mock was called with correct parameters
     mock_auth_service.sign_out.assert_called_once_with(
-        access_token="mock_access_token",
+        access_token=f"{jwt_token}",
         refresh_token_app="mock_refresh_token",
     )
 

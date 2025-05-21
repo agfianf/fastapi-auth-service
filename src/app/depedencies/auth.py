@@ -47,6 +47,7 @@ class JWTBearer(HTTPBearer):
         is_creds_revoked = redis_helper.is_token_revoked(credentials.credentials)
 
         if is_creds_revoked:
+            print("Token revoked in Redis by JWTBearer")
             raise TokenRevokedException()
 
         token_jwt = credentials.credentials
