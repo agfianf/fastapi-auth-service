@@ -106,7 +106,6 @@ class AuthService:
             "service_role": service_user_role,
             "service_status": service_user_status,
         }
-        print(f"Decoded JWT: {data}")
 
         time_now = time.time()
         expire_time = int(decoded_jwt.get("exp", 0) - time_now)
