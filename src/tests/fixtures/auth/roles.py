@@ -3,7 +3,7 @@ import time
 
 import pytest_asyncio
 
-from app.depedencies.auth import jwt_bearer, role_admin, role_superadmin
+from app.depedencies.auth import jwt_bearer, role_admin
 from app.helpers.generator import generate_uuid
 from app.helpers.generator_jwt import create_access_token
 from app.main import app
@@ -88,13 +88,14 @@ async def override_role_jwt_bearer():
 
 @pytest_asyncio.fixture
 async def override_role_superadmin():
-    """Override role checker for admin role wo mfa."""
-    data = get_data_user_superadmin_valid()
-    app.dependency_overrides[role_superadmin] = lambda: data
+    user_profile, jwt_token = get_data_user_superadmin_valid()
 
-    yield data
-    # Cleanup after test
-    app.dependency_overrides.pop(role_superadmin, None)
+    async def override():
+        return user_profile, jwt_token
+
+    app.dependency_overrides[jwt_bearer] = override
+    yield user_profile, jwt_token
+    app.dependency_overrides.pop(jwt_bearer, None)
 
 
 @pytest_asyncio.fixture
