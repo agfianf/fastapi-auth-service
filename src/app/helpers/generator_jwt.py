@@ -71,16 +71,17 @@ def generate_temporary_mfa_token(
     redis: RedisHelper,
     user_data: dict,
     expire_minutes: int = settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES,
+    username: str | None = None,
 ) -> str:
     expire_time = time.time() + (60 * expire_minutes)
     jwt_data_temporary = {
         **user_data,
-        "expire_time": expire_time,
+        "exp": expire_time,
     }
 
     mfa_temporary_token = create_access_token(data=jwt_data_temporary)
     redis.set_data(
-        key=f"mfa_temporary_token-{user_data.get('username')}",
+        key=f"mfa_temporary_token-{username}",
         value=mfa_temporary_token,
         expire_sec=60 * expire_minutes,  # 3 minutes
     )

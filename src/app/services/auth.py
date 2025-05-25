@@ -158,11 +158,11 @@ class AuthService:
         payload: SignInPayload,
         connection: AsyncConnection,
     ) -> tuple[SignInResponse | None, dict | None]:
+        print(">>> Processing sign-in request...")
         curr_user: UserMembershipQueryReponse | None = await self.repo_auth.get_user_by_username(
             username=payload.username,
             connection=connection,
         )
-
         verify_user_status(user=curr_user)
         verify_user_password(
             password_input=payload.password.get_secret_value(),
@@ -174,6 +174,7 @@ class AuthService:
                 redis=self.redis,
                 user_data=curr_user.transform_jwt_v2(),
                 expire_minutes=3,
+                username=curr_user.username,
             )
 
             signin_response = SignInResponse(
@@ -254,14 +255,16 @@ class AuthService:
             username=username,
             connection=connection,
         )
-
+        print(f">>> Verifying MFA for user: {user.username if user else 'Unknown'}")
         verify_user_status(user=user)
+        print(f">>> 2. Verifying MFA for user: {user.username if user else 'Unknown'}")
         verify_mfa_credentials(
             redis=self.redis,
             mfa_token=mfa_token,
             mfa_code=mfa_code,
             user=user,
         )
+        print(f">>> 3. Verifying MFA for user: {user.username if user else 'Unknown'}")
 
         access_token, cookies = generate_jwt_tokens(
             user_data=user.transform_jwt(),
