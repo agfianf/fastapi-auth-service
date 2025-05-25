@@ -65,6 +65,7 @@ class JWTBearer(HTTPBearer):
         if user_profile is None:
             raise InvalidTokenException()
 
+        print("[JWTBearer] User is inactive", user_profile)
         if not user_profile.is_active:
             raise InactiveUserException()
 

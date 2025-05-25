@@ -66,8 +66,11 @@ class AuthService:
             member_uuid=user_uuid,
             connection=connection,
         )
+        if user_profile is None:
+            raise InvalidTokenException()
 
         # 2. Check is user is active
+        print(f"[AuthService] User profile: {user_profile}")
         if not user_profile.is_active:
             raise InactiveUserException()
 
@@ -255,19 +258,15 @@ class AuthService:
             username=username,
             connection=connection,
         )
-        print(f">>> Verifying MFA for user: {user.username if user else 'Unknown'}")
         verify_user_status(user=user)
-        print(f">>> 2. Verifying MFA for user: {user.username if user else 'Unknown'}")
         verify_mfa_credentials(
             redis=self.redis,
             mfa_token=mfa_token,
             mfa_code=mfa_code,
             user=user,
         )
-        print(f">>> 3. Verifying MFA for user: {user.username if user else 'Unknown'}")
-
         access_token, cookies = generate_jwt_tokens(
-            user_data=user.transform_jwt(),
+            user_data=user.transform_jwt_v2(),
             expire_minutes_access=settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES,
             expire_minutes_refresh=settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES,
         )
