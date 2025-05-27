@@ -3,9 +3,14 @@ import time
 
 from datetime import datetime, timedelta
 
+import structlog
+
 from app.config import KEY_REFRESH_TOKEN, settings
 from app.helpers.auth import create_access_token, create_refresh_token
 from app.integrations.redis import RedisHelper
+
+
+logger = structlog.get_logger(__name__)
 
 
 # auth
@@ -80,6 +85,7 @@ def generate_temporary_mfa_token(
     }
 
     mfa_temporary_token = create_access_token(data=jwt_data_temporary)
+    logger.debug(f"Create key `mfa_temporary_token-{username}` with expire {expire_minutes} minutes")
     redis.set_data(
         key=f"mfa_temporary_token-{username}",
         value=mfa_temporary_token,

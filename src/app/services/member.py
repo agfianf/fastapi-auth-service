@@ -1,3 +1,5 @@
+import structlog
+
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils.compat import UUID
 
@@ -21,6 +23,9 @@ from app.schemas.member.response import MFAQRCodeResponse, UpdateMemberMFARespon
 from app.schemas.users import UserMembershipQueryReponse
 
 
+logger = structlog.get_logger(__name__)
+
+
 class MemberService:
     def __init__(
         self,
@@ -37,10 +42,12 @@ class MemberService:
         ignore_error: bool = False,
     ) -> UserMembershipQueryReponse:
         """Get member details."""
+        logger.debug("Fetching member details")
         user_cache_key = f"member:{str(user_uid)}"
         data_cache = self.redis.get_data(user_cache_key)
 
         if data_cache is not None:
+            logger.debug("Member details fetched from cache")
             return UserMembershipQueryReponse(**data_cache)
 
         member = await self.repo_member.get_member_by_uuid(
@@ -50,7 +57,9 @@ class MemberService:
 
         if member is None:
             if ignore_error:
+                logger.debug("Member not found, returning None")
                 return None
+            logger.warning("Member not found")
             raise MemberNotFoundException()
 
         self.redis.set_data(
@@ -59,6 +68,7 @@ class MemberService:
             expire_sec=3600,  # 1 hour
         )
 
+        logger.debug("Member details fetched successfully")
         return member
 
     async def update_password(
@@ -70,6 +80,7 @@ class MemberService:
         connection: AsyncConnection,
     ) -> tuple[UpdateMemberResponse, str]:
         """Update member password."""
+        logger.debug("Updating member password")
         # Get the current member details
         member = await self.fetch_member_details(
             current_user=current_user,
@@ -83,6 +94,7 @@ class MemberService:
         )
 
         if not is_verified:
+            logger.warning("Invalid current password provided")
             raise InvalidCurrentPasswordException()
 
         # Check if new password is not too similar to username
@@ -93,15 +105,18 @@ class MemberService:
         )
 
         if not is_valid:
+            logger.warning("Password validation failed")
             raise PasswordUpdateFailedException(ls_msgs)
 
         if payload.new_password.get_secret_value() == payload.current_password.get_secret_value():
+            logger.warning("New password cannot be the same as current password")
             raise PasswordUpdateFailedException(["New password cannot be the same as the current password"])
 
         # Generate new password hash
         new_password_hash = get_password_hash(payload.new_password.get_secret_value())
 
         # Update password in database
+        logger.debug("Updating password in database")
         success = await self.repo_member.update_member_password(
             connection=connection,
             member_uuid=member.uuid,
@@ -110,6 +125,7 @@ class MemberService:
         )
 
         if not success:
+            logger.error("Failed to update password")
             raise PasswordUpdateFailedException()
 
         # Revoke old tokens
@@ -128,6 +144,7 @@ class MemberService:
             expire_minutes_refresh=settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES,
         )
 
+        logger.debug("Password updated successfully")
         return UpdateMemberResponse(
             access_token=new_access_token,
             user=updated_member,
@@ -142,6 +159,7 @@ class MemberService:
         connection: AsyncConnection,
     ) -> tuple[UpdateMemberMFAResponse, dict]:
         """Update member MFA settings."""
+        logger.debug("Updating member MFA settings")
         # Get the current member details
         member = await self.fetch_member_details(
             current_user=current_user,
@@ -152,6 +170,7 @@ class MemberService:
         mfa_secret = None
         qr_code_bs64 = None
         if payload.mfa_enabled and not member.mfa_enabled:
+            logger.debug("Enabling MFA for member")
             mfa_secret = TwoFactorAuth.get_secret()
             qr_code_bs64 = TwoFactorAuth.get_provisioning_qrcode_base64(
                 username=current_user.username,
@@ -160,8 +179,10 @@ class MemberService:
 
         # If disabling MFA, we need to verify the MFA code
         if member.mfa_enabled and not payload.mfa_enabled:
+            logger.debug("Disabling MFA for member")
             # If disabling MFA, verify the MFA code
             if not payload.mfa_code:
+                logger.warning("MFA code required for disabling MFA")
                 raise MFACodeInvalidException()
 
             is_verified = TwoFactorAuth.verify_token(
@@ -170,9 +191,11 @@ class MemberService:
             )
 
             if not is_verified:
+                logger.warning("Invalid MFA code provided")
                 raise MFACodeInvalidException()
 
         # Update MFA settings in database
+        logger.debug("Updating MFA settings in database")
         success = await self.repo_member.update_member_mfa(
             connection=connection,
             member_uuid=member.uuid,
@@ -182,6 +205,7 @@ class MemberService:
         )
 
         if not success:
+            logger.error("Failed to update MFA settings")
             raise MFAUpdateFailedException()
 
         # Revoke old tokens
@@ -200,6 +224,7 @@ class MemberService:
             expire_minutes_refresh=settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES,
         )
 
+        logger.debug("MFA settings updated successfully")
         return UpdateMemberMFAResponse(
             access_token=new_access_token,
             user=updated_member,
@@ -215,6 +240,7 @@ class MemberService:
         connection: AsyncConnection,
     ) -> tuple[UpdateMemberResponse, str]:
         """Update member profile."""
+        logger.debug("Updating member profile")
         # Update profile in database
         updated_member = await self.repo_member.update_member_profile(
             connection=connection,
@@ -224,6 +250,7 @@ class MemberService:
         )
 
         if updated_member is None:
+            logger.error("Failed to update member profile")
             raise MemberNotFoundException()
 
         # Revoke old tokens
@@ -236,6 +263,7 @@ class MemberService:
             expire_minutes_refresh=settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES,
         )
 
+        logger.debug("Member profile updated successfully")
         return UpdateMemberResponse(
             access_token=new_access_token,
             user=updated_member,
@@ -247,13 +275,16 @@ class MemberService:
         connection: AsyncConnection,
     ) -> MFAQRCodeResponse:
         """Get MFA QR code for setup."""
+        logger.debug("Fetching MFA QR code")
         # Get the current member details
+        logger.debug("Fetching member details for MFA QR code")
         member = await self.fetch_member_details(
             connection=connection,
-            current_user=current_user,
+            user_uid=current_user.uuid,
         )
 
         if member.mfa_enabled is False:
+            logger.warning("MFA is not enabled for the user")
             raise MFANotEnabledException()
 
         # Generate QR code
@@ -262,10 +293,12 @@ class MemberService:
             secret=member.mfa_secret,
         )
 
+        logger.debug("MFA QR code generated successfully")
         return MFAQRCodeResponse(qr_code_bs64=qr_code_bs64)
 
     def _revoke_tokens(self, access_token: str, refresh_token: str) -> None:
         """Revoke access and refresh tokens by adding them to the Redis blacklist."""
+        logger.debug("Revoking tokens")
         import time
 
         from app.helpers.auth import decode_access_jwt, decode_refresh_jwt
