@@ -5,14 +5,19 @@ This module initializes the FastAPI application and defines the basic routes.
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+import structlog
+
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from app.config import settings
+from app.helpers.logger import setup_logging
+from app.helpers.response_api import JsonResponse
 from app.integrations.redis import RedisHelper
 from app.middleware.error_response import handle_error_response
+from app.middleware.logger import logging_middleware
 from app.repositories.admin import AdminAsyncRepositories
 from app.repositories.auth import AuthAsyncRepositories
 from app.repositories.business_roles import BusinessRoleAsyncRepositories
@@ -33,9 +38,13 @@ from app.services.roles import RoleService
 from app.services.services import ServiceService
 
 
+logger = structlog.get_logger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa
-    print("Initializing resources...")
+    setup_logging(log_level="DEBUG", enable_json_logs=True, enable_file_logs=True, is_async=False)
+    logger.info("Initializing resources...")
     # integration
     redis = RedisHelper()
     member_repo = MemberAsyncRepositories()
@@ -86,7 +95,7 @@ async def lifespan(app: FastAPI):  # noqa
         "business_role_service": business_role_service,
     }
 
-    print("Cleaning up resources...")
+    logger.info("Application is shutting down...")
 
 
 app = FastAPI(
@@ -102,6 +111,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.middleware("http")(logging_middleware)
+
+
+# Custom Exception handler
+@app.exception_handler(Exception)
+async def handle_generic_exception(request: Request, exc: Exception):  # noqa
+    message = str(exc)
+    return JsonResponse(
+        data=None,
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        message="Failed process your request" + f" due to: {message}",
+        success=False,
+        meta=None,
+    )
 
 
 @app.get("/", include_in_schema=False)

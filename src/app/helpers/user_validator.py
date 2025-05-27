@@ -1,3 +1,5 @@
+import structlog
+
 from app.depedencies.auth import decode_access_jwt
 from app.exceptions.auth import InvalidMFATokenException, SignInFailureException, UserIsUnactiveException
 from app.helpers.auth import verify_password
@@ -6,27 +8,20 @@ from app.integrations.redis import RedisHelper
 from app.schemas.users import CreateUserQueryResponse, UserMembershipQueryReponse
 
 
+logger = structlog.get_logger(__name__)
+
+
 def verify_user_status(user: CreateUserQueryResponse | UserMembershipQueryReponse | None) -> None:
     if user is None:
-        print("[Sign In Failed]: User not found")
+        logger.error("[Sign In Failed]: User not found")
         raise SignInFailureException()
 
     if user.is_active is False:
-        print(
-            "[Sign In Failed]: User is not active",
-            user.username,
-            user.email,
-            user.is_active,
-        )
+        logger.error("[Sign In Failed]: User is not active")
         raise UserIsUnactiveException()
 
     if user.deleted_at is not None:
-        print(
-            "[Sign In Failed]: User is deleted",
-            user.username,
-            user.email,
-            user.deleted_at,
-        )
+        logger.error("[Sign In Failed]: User is deleted")
         raise SignInFailureException()
 
 
@@ -40,7 +35,7 @@ def verify_user_password(
     )
 
     if not is_verified:
-        print("[Sign In Failed]: Password verification failed")
+        logger.error("[Sign In Failed]: Password verification failed")
         raise SignInFailureException()
 
 
@@ -50,27 +45,33 @@ def verify_mfa_credentials(
     mfa_code: str,
     user: UserMembershipQueryReponse,
 ) -> None:
-    mfa_token_db = redis.get_data(
-        f"mfa_temporary_token-{user.username}",
-    )
+    key_cache = f"mfa_temporary_token-{user.username}"
+    mfa_token_db = redis.get_data({key_cache})
+    logger.info("Verifying MFA credentials")
     if mfa_token_db != mfa_token:
-        print(mfa_token_db, mfa_token)
-        print("[Sign In Failed]: Invalid MFA token")
+        logger.debug(
+            "[Sign In Failed]: MFA token does not match",
+            mfa_token_db=mfa_token_db,
+            mfa_token=mfa_token,
+        )
+        logger.error("[Sign In Failed]: Invalid MFA token")
         raise InvalidMFATokenException()
 
     user_data = decode_access_jwt(token=mfa_token)
     if user_data is None:
-        print("[Sign In Failed]: Invalid MFA token data")
+        logger.error("[Sign In Failed]: Invalid MFA token data")
         raise InvalidMFATokenException()
 
-    print("[MFA Verification]: Verifying MFA code", user.mfa_secret)
+    logger.info("[MFA Verification]: Verifying MFA code")
     is_verified_token = TwoFactorAuth.verify_token(
         token=mfa_code,
         secret=user.mfa_secret,
     )
 
     if not is_verified_token:
-        print("[Sign In Failed]: Invalid MFA code")
+        logger.error("[Sign In Failed]: Invalid MFA code")
         raise InvalidMFATokenException()
 
-    redis.delete_data(f"mfa_temporary_token-{user.username}")
+    logger.info("[MFA Verification]: MFA code verified successfully")
+    redis.delete_data(key_cache)
+    logger.debug("Deleted MFA temporary token from cache")

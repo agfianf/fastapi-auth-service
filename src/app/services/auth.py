@@ -1,5 +1,7 @@
 import time
 
+import structlog
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils import UUID
@@ -35,6 +37,9 @@ from app.schemas.users import (
 from app.schemas.users.response import AccessTokenResponse
 
 
+logger = structlog.get_logger(__name__)
+
+
 class AuthService:
     def __init__(
         self,
@@ -46,11 +51,17 @@ class AuthService:
         self.repo_member = repo_member
         self.redis = redis
 
-    async def verify_token(self, token: str, service_id: UUID, connection: AsyncConnection) -> UserTokenVerifyResponse:
+    async def verify_token(  # noqa: C901
+        self,
+        token: str,
+        service_id: UUID,
+        connection: AsyncConnection,
+    ) -> UserTokenVerifyResponse:
         """Verify the token and return a success message."""
         is_creds_revoked = self.redis.is_token_revoked(token)
 
         if is_creds_revoked:
+            logger.warning("Token revoked in Redis", jwt=token, service_id=service_id)
             raise TokenRevokedException()
 
         key_user_details = f"jwt_verify:{token}:{service_id}"
@@ -59,6 +70,7 @@ class AuthService:
         # 1. Verify token is valid
         decoded_jwt = decode_access_jwt(token=token)
         if decoded_jwt is None:
+            logger.warning("Invalid JWT token", jwt=token, service_id=service_id)
             raise InvalidTokenException()
 
         user_uuid = decoded_jwt.get("sub")
@@ -67,11 +79,12 @@ class AuthService:
             connection=connection,
         )
         if user_profile is None:
+            logger.warning("User not found", jwt=token, service_id=str(service_id))
             raise InvalidTokenException()
 
         # 2. Check is user is active
-        print(f"[AuthService] User profile: {user_profile}")
         if not user_profile.is_active:
+            logger.warning("Inactive user", jwt=token, service_id=str(service_id))
             raise InactiveUserException()
 
         is_registered_service = False
@@ -92,10 +105,22 @@ class AuthService:
 
         # 3. Check if user is registered on the targeted service
         if not is_registered_service:
+            logger.warning(
+                "User not registered on targeted service",
+                jwt=token,
+                service_id=str(service_id),
+                user_uuid=str(user_uuid),
+            )
             raise UserNotRegisteredOnTargetedService()
 
         # 4. Check if user is active on the targeted service
         if service_user_status is False:
+            logger.warning(
+                "User is inactive on the targeted service",
+                jwt=token,
+                service_id=str(service_id),
+                user_uuid=str(user_uuid),
+            )
             raise ServiceInactiveUserException()
 
         # ! until here, all verification is done and user is valid
@@ -128,7 +153,7 @@ class AuthService:
             value=result.to_redis_dict(),
             expire_sec=expire_time,
         )
-
+        logger.debug("Token verified successfully")
         return result
 
     async def sign_up(
@@ -139,6 +164,7 @@ class AuthService:
         qr_code_bs64 = None
         mfa_secret = None
         if payload.mfa_enabled:
+            logger.debug("MFA is enabled for user registration")
             mfa_secret = TwoFactorAuth.get_secret()
             qr_code_bs64 = TwoFactorAuth.get_provisioning_qrcode_base64(
                 username=payload.username,
@@ -150,10 +176,12 @@ class AuthService:
             **payload.model_dump(exclude_none=True),
         )
 
+        logger.debug("Creating user with payload", payload=query_payload.model_dump(mode="json"))
         user_info = await self.repo_auth.create_user(
             payload=query_payload,
             connection=connection,
         )
+        logger.debug("User created successfully", user_id=str(user_info.uuid))
         return user_info, qr_code_bs64
 
     async def sign_in(
@@ -161,11 +189,11 @@ class AuthService:
         payload: SignInPayload,
         connection: AsyncConnection,
     ) -> tuple[SignInResponse | None, dict | None]:
-        print(">>> Processing sign-in request...")
         curr_user: UserMembershipQueryReponse | None = await self.repo_auth.get_user_by_username(
             username=payload.username,
             connection=connection,
         )
+
         verify_user_status(user=curr_user)
         verify_user_password(
             password_input=payload.password.get_secret_value(),
@@ -173,6 +201,7 @@ class AuthService:
         )
 
         if curr_user.mfa_enabled:
+            logger.debug("MFA is enabled for user")
             temp_token = generate_temporary_mfa_token(
                 redis=self.redis,
                 user_data=curr_user.transform_jwt_v2(),
@@ -185,6 +214,7 @@ class AuthService:
                 mfa_token=temp_token,
                 mfa_required=True,
             )
+            logger.debug("MFA token generated for user")
             return signin_response, None
 
         access_token, cookies = generate_jwt_tokens(
@@ -198,7 +228,7 @@ class AuthService:
             mfa_token=None,
             mfa_required=False,
         )
-
+        logger.debug("User signed in successfully", user_id=str(curr_user.uuid))
         return signin_response, cookies
 
     async def sign_out(
@@ -207,12 +237,14 @@ class AuthService:
         refresh_token_app: str,
     ) -> tuple[dict, dict]:
         if refresh_token_app is None or len(refresh_token_app) == 0:
+            logger.warning("Refresh token not found or empty")
             raise RefreshTokenNotFoundException()
 
         data_access = decode_access_jwt(token=access_token)
         data_refresh = decode_refresh_jwt(token=refresh_token_app)
 
         if data_access is None or data_refresh is None:
+            logger.warning("User is not signed in or token is invalid")
             raise AlreadySignedOutException()
 
         timenow = time.time()
@@ -223,18 +255,21 @@ class AuthService:
         is_refresh_token_revoked = self.redis.is_token_revoked(token=refresh_token_app)
 
         if is_access_token_revoked is False:
+            logger.debug("Revoking access token")
             self.redis.add_token_to_blacklist(
                 token=access_token,
                 expire_sec=expiry_access_sec,
             )
 
         if is_refresh_token_revoked is False:
+            logger.debug("Revoking refresh token")
             self.redis.add_token_to_blacklist(
                 token=refresh_token_app,
                 expire_sec=expiry_refresh_sec,
             )
 
         if is_access_token_revoked and is_refresh_token_revoked:
+            logger.warning("Session has already been logged out")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=("Session has already been logged out. Please login again."),
@@ -242,6 +277,7 @@ class AuthService:
 
         delete_cookie = generate_delete_refresh_cookies()
 
+        logger.debug("User signed out successfully")
         return {
             "access_token_revoked": True,
             "refresh_token_revoked": True,
@@ -254,6 +290,8 @@ class AuthService:
         username: str,
         connection: AsyncConnection,
     ) -> VerifyMFAResponse:
+        """Verify MFA credentials and return access token."""
+        logger.debug("Verifying MFA credentials for user")
         user: UserMembershipQueryReponse | None = await self.repo_auth.get_user_by_username(
             username=username,
             connection=connection,
@@ -270,7 +308,7 @@ class AuthService:
             expire_minutes_access=settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES,
             expire_minutes_refresh=settings.AUTH_TOKEN_REFRESH_EXPIRE_MINUTES,
         )
-
+        logger.debug("MFA credentials verified successfully", user_id=str(user.uuid))
         return VerifyMFAResponse(access_token=access_token), cookies
 
     async def refresh_token(
@@ -283,17 +321,19 @@ class AuthService:
 
         is_revoked = self.redis.is_token_revoked(token=refresh_token_app)
         if is_revoked:
+            logger.warning("Refresh token has been revoked")
             raise SessionExpiredException()
 
         # check refresh token
         data_user = decode_refresh_jwt(token=refresh_token_app)
         if data_user is None:
+            logger.warning("Invalid or expired refresh token")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired refresh token. Please login again.",
             )
         extend_time = 60 * settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES
-        data_user.update({"expire_time": time.time() + extend_time})
+        data_user.update({"exp": time.time() + extend_time})
         access_token = create_access_token(data=data_user)
-
+        logger.debug("Access token refreshed successfully", user_id=data_user.get("sub"))
         return AccessTokenResponse(access_token=access_token)

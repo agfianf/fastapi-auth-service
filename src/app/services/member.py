@@ -1,3 +1,5 @@
+import structlog
+
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils.compat import UUID
 
@@ -19,6 +21,9 @@ from app.repositories.member import MemberAsyncRepositories
 from app.schemas.member.payload import UpdateMemberPayload, UpdateMFAPayload, UpdatePasswordPayload
 from app.schemas.member.response import MFAQRCodeResponse, UpdateMemberMFAResponse, UpdateMemberResponse
 from app.schemas.users import UserMembershipQueryReponse
+
+
+logger = structlog.get_logger(__name__)
 
 
 class MemberService:
@@ -248,12 +253,14 @@ class MemberService:
     ) -> MFAQRCodeResponse:
         """Get MFA QR code for setup."""
         # Get the current member details
+        logger.debug("Fetching member details for MFA QR code")
         member = await self.fetch_member_details(
             connection=connection,
-            current_user=current_user,
+            user_uid=current_user.uuid,
         )
 
         if member.mfa_enabled is False:
+            logger.error("MFA is not enabled for the user")
             raise MFANotEnabledException()
 
         # Generate QR code

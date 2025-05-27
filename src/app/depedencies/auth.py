@@ -1,6 +1,8 @@
 from functools import lru_cache
 from typing import Annotated
 
+import structlog
+
 from fastapi import Depends, Request
 from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -21,6 +23,7 @@ from app.schemas.users import UserMembershipQueryReponse
 from app.services.member import MemberService
 
 
+logger = structlog.get_logger(__name__)
 # Constants
 AUTH_SCHEME = "Bearer"
 
@@ -39,36 +42,50 @@ class JWTBearer(HTTPBearer):
         member_service: MemberService = request.state.member_service
 
         if not credentials:
+            logger.warning("No credentials provided in request")
             raise InvalidCredentialsHeaderException()
 
         if credentials.scheme != AUTH_SCHEME:
+            logger.warning("Invalid credentials scheme")
             raise InvalidCredentialsSchemeException()
 
         is_creds_revoked = redis_helper.is_token_revoked(credentials.credentials)
 
         if is_creds_revoked:
-            print("Token revoked in Redis by JWTBearer")
+            logger.warning("Token revoked in Redis")
             raise TokenRevokedException()
 
         token_jwt = credentials.credentials
         decoded_jwt = decode_access_jwt(token_jwt)
 
         if decoded_jwt is None:
+            logger.warning("Invalid JWT token", token=token_jwt)
             raise InvalidTokenException()
 
-        user_profile = await member_service.fetch_member_details(
-            user_uid=decoded_jwt["sub"],
-            connection=connection,
-            ignore_error=True,
-        )
+        try:
+            user_profile = await member_service.fetch_member_details(
+                user_uid=decoded_jwt["sub"],
+                connection=connection,
+                ignore_error=True,
+            )
+        except Exception as e:
+            logger.error("Error fetching user profile", error=str(e))
+            user_profile = None
 
         if user_profile is None:
+            logger.warning("User not found", token=token_jwt)
             raise InvalidTokenException()
 
-        print("[JWTBearer] User is inactive", user_profile)
+        structlog.contextvars.bind_contextvars(
+            user_id=str(user_profile.uuid),
+            user_role=user_profile.role,
+        )
+
         if not user_profile.is_active:
+            logger.warning("User is inactive", token=token_jwt)
             raise InactiveUserException()
 
+        logger.debug("Authenticated user")
         return user_profile, credentials.credentials
 
 
