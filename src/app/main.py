@@ -10,7 +10,7 @@ import structlog
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.config import settings
 from app.helpers.logger import setup_logging
@@ -118,12 +118,16 @@ app.middleware("http")(logging_middleware)
 @app.exception_handler(Exception)
 async def handle_generic_exception(request: Request, exc: Exception):  # noqa
     message = str(exc)
-    return JsonResponse(
+    response = JsonResponse(
         data=None,
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        message="Failed process your request" + f" due to: {message}",
+        message=f"Failed to process your request due to: {message}",
         success=False,
         meta=None,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content=response.model_dump(mode="json"),
     )
 
 

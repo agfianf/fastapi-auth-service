@@ -46,7 +46,7 @@ def verify_mfa_credentials(
     user: UserMembershipQueryReponse,
 ) -> None:
     key_cache = f"mfa_temporary_token-{user.username}"
-    mfa_token_db = redis.get_data({key_cache})
+    mfa_token_db = redis.get_data(key_cache)
     logger.info("Verifying MFA credentials")
     if mfa_token_db != mfa_token:
         logger.debug(
