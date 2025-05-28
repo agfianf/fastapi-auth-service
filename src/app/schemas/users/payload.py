@@ -91,6 +91,42 @@ class CreateUserPayload(BaseModel):
         return data
 
 
+class ResetPasswordPayload(BaseModel):
+    reset_token: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="Reset password token",
+        examples=["reset_token_example"],
+    )
+    password: SecretStr = Field(
+        ...,
+        min_length=8,
+        max_length=255,
+        description="Password of the user",
+    )
+    password_confirm: SecretStr = Field(
+        ...,
+        min_length=8,
+        max_length=255,
+        description="Password confirmation of the user",
+    )
+
+    def validate_password(self, username) -> Self:  # noqa:ANN102
+        is_valid, msgs = PasswordValidate.validate_password(
+            username=username,
+            pwd=self.password.get_secret_value(),
+            conf_pwd=self.password_confirm.get_secret_value(),
+        )
+
+        if is_valid:
+            return self
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="; ".join(msgs),
+        )
+
+
 class SignInPayload(BaseModel):
     username: str = Field(
         ...,

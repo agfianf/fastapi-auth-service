@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     MAIL_FROM_NAME: str
     MAIL_TIMEOUT: int
 
+    URL_BACKEND_HOST: str
+    URL_BACKEND_PORT: str
+    URL_LOGIN_REDIRECT: str
+
     # Property untuk parse whitelist jadi set
     @property
     def parsed_whitelist(self) -> set[str]:

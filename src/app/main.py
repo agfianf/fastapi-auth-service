@@ -12,9 +12,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from app.config import settings
+from app.config import email_conf, settings
 from app.helpers.logger import setup_logging
 from app.helpers.response_api import JsonResponse
+from app.integrations.mail import MailSender
 from app.integrations.redis import RedisHelper
 from app.middleware.error_response import handle_error_response
 from app.middleware.logger import logging_middleware
@@ -54,6 +55,7 @@ async def lifespan(app: FastAPI):  # noqa
         repo_auth=auth_repo,
         repo_member=member_repo,
         redis=redis,
+        mail_sender=MailSender(email_conf),
     )
 
     admin_service = AdminService(

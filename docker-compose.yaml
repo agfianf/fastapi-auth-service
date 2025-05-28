@@ -11,7 +11,7 @@ services:
     ports:
       - "18100:8000"
     env_file:
-      - ./src/app/.env.example
+      - ./src/app/.env
     environment:
       - PYTHONPATH=/code/src
     tty: true

@@ -1,8 +1,12 @@
+import datetime as dt
 import time
+
+from datetime import datetime
 
 import structlog
 
 from fastapi import HTTPException, status
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils import UUID
 
@@ -17,9 +21,17 @@ from app.exceptions.auth import (
     TokenRevokedException,
     UserNotRegisteredOnTargetedService,
 )
-from app.helpers.auth import create_access_token, decode_access_jwt, decode_refresh_jwt
-from app.helpers.generator_jwt import generate_delete_refresh_cookies, generate_jwt_tokens, generate_temporary_mfa_token
+from app.exceptions.member import PasswordUpdateFailedException
+from app.helpers.auth import create_access_token, decode_access_jwt, decode_refresh_jwt, get_password_hash
+from app.helpers.generator_jwt import (
+    generate_delete_refresh_cookies,
+    generate_jwt_forgot_password_token,
+    generate_jwt_tokens,
+    generate_temporary_mfa_token,
+)
+from app.helpers.password_validator import PasswordValidate
 from app.helpers.user_validator import verify_mfa_credentials, verify_user_password, verify_user_status
+from app.integrations.mail import MailSender
 from app.integrations.mfa import TwoFactorAuth
 from app.integrations.redis import RedisHelper
 from app.repositories.auth import AuthAsyncRepositories
@@ -34,6 +46,7 @@ from app.schemas.users import (
     UserTokenVerifyResponse,
     VerifyMFAResponse,
 )
+from app.schemas.users.payload import ResetPasswordPayload
 from app.schemas.users.response import AccessTokenResponse
 
 
@@ -46,10 +59,12 @@ class AuthService:
         repo_auth: AuthAsyncRepositories,
         repo_member: MemberAsyncRepositories,
         redis: RedisHelper,
+        mail_sender: MailSender,
     ) -> None:
         self.repo_auth = repo_auth
         self.repo_member = repo_member
         self.redis = redis
+        self.mail_sender = mail_sender
 
     async def verify_token(  # noqa: C901
         self,
@@ -337,3 +352,135 @@ class AuthService:
         access_token = create_access_token(data=data_user)
         logger.debug("Access token refreshed successfully", user_id=data_user.get("sub"))
         return AccessTokenResponse(access_token=access_token)
+
+    async def forgot_password(self, email: str, connection: AsyncConnection) -> None:
+        """Reset password and send reset link to email."""
+        user = await self.repo_auth.get_user_by_email(email=email, connection=connection)
+        if user is None:
+            # we do not disclose whether the email exists in the system
+            # to prevent email enumeration attacks
+            logger.warning("User not found for reset password", email=email)
+            return
+
+        # Here you would typically generate a reset token and send an email
+        expire_minutes = 15
+        reset_token = generate_jwt_forgot_password_token(
+            user_data=user.transform_jwt_v2(),
+            expire_minutes=expire_minutes,
+        )
+
+        # set to cache
+        logger.debug(f"Create key for password reset with expire {expire_minutes} minutes")
+        key_cache_reset = f"password_reset:{reset_token}"
+        key_cache_reset_used = f"password_reset_used:{email}"
+        value_cache_reset = email
+
+        url_reset_page = f"http://{settings.URL_BACKEND_HOST}:{settings.URL_BACKEND_PORT}/api/v1/auth/reset-password?token={reset_token}"
+        logger.debug("Sending password reset email", email=email, url_reset_page=url_reset_page)
+        await self.mail_sender.send_email_to(
+            email=email,
+            subject="Password Reset Request",
+            body=f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #333; text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px;">Password Reset Request</h1>
+            <p style="color: #555; font-size: 16px; line-height: 1.5;">
+                We received a request to reset your password. Click the button below to proceed:
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{url_reset_page}"
+                   style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                Reset Password
+                </a>
+            </div>
+            <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                If you did not request this password reset, please ignore this email.
+            </p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #999; font-size: 12px; text-align: center;">
+                This link will expire in 15 minutes for security reasons.
+            </p>
+            </div>
+            """,  # noqa: E501
+        )
+
+        self.redis.set_data(
+            key=key_cache_reset,
+            value=value_cache_reset,
+            expire_sec=60 * expire_minutes,
+        )
+        self.redis.set_data(
+            key=key_cache_reset_used,
+            value=False,
+            expire_sec=60 * expire_minutes,
+        )
+
+        # For simplicity, we are just logging the action
+        logger.info("Reset password request processed", email=email)
+
+    async def reset_password(
+        self,
+        payload: ResetPasswordPayload,
+        connection: AsyncConnection,
+    ) -> None:
+        """Process the reset password request."""
+        # check reset token from redis
+        logger.debug("Processing reset password request", payload=payload.model_dump(mode="json"))
+        data = decode_access_jwt(token=payload.reset_token)
+        if data is None:
+            logger.warning("Invalid reset token", reset_token=payload.reset_token)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired session for reset password",
+            )
+
+        key_cache_reset = f"password_reset:{payload.reset_token}"
+        email_user = self.redis.get_data(key_cache_reset)
+        if email_user is None:
+            logger.warning("Reset token not found in Redis", reset_token=payload.reset_token)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User already reset password or invalid token",
+            )
+        logger.debug("value from redis", reset_token=payload.reset_token, email_user=email_user)
+
+        key_cache_reset_used = f"password_reset_used:{email_user}"
+        is_used = self.redis.get_data(key_cache_reset_used)
+
+        logger.debug("value token used status ", reset_token=payload.reset_token, is_used=is_used)
+        if is_used:
+            logger.warning("Reset token has been revoked", reset_token=payload.reset_token)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Reset token has been revoked or expired",
+            )
+
+        user = await self.repo_auth.get_user_by_email(email=email_user, connection=connection)
+        if user is None:
+            logger.warning("User not found for reset password", user_uuid=str(user.uuid))
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        payload.validate_password(username=user.username)
+        new_password_hash = get_password_hash(payload.password.get_secret_value())
+
+        # Update the user's password
+        is_success = await self.repo_member.update_member_password(
+            member_uuid=user.uuid,
+            password_hash=new_password_hash,
+            connection=connection,
+            executed_by=user.email,
+        )
+
+        if not is_success:
+            logger.error("Failed to update password")
+            raise PasswordUpdateFailedException()
+
+        # add blacklist token
+        self.redis.set_data(
+            key=key_cache_reset_used,
+            value=True,
+            expire_sec=60 * 15,  # 15 minutes
+        )
+        logger.info("Password reset successfully", user_id=user.uuid)

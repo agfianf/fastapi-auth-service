@@ -1,9 +1,15 @@
+import os
+
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, Form, Request, Response, status
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils.compat import UUID
 
+from app.config import settings
 from app.depedencies.auth import JWTBearer
 from app.depedencies.database import get_async_conn, get_async_transaction_conn
 from app.depedencies.rate_limiter import (
@@ -20,14 +26,19 @@ from app.schemas.users import (
     UserTokenVerifyResponse,
     VerifyMFAResponse,
 )
+from app.schemas.users.payload import ResetPasswordPayload
 from app.schemas.users.response import AccessTokenResponse
 from app.services.auth import AuthService
 
+
+path_templates_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
 
 router = APIRouter(
     prefix="/api/v1/auth",
     tags=["Authentication"],
 )
+print(f"Using templates directory: {path_templates_dir}")
+templates = Jinja2Templates(directory=path_templates_dir)
 
 
 @router.post("/verify-token", response_model=JsonResponse[UserTokenVerifyResponse, None])
@@ -229,5 +240,68 @@ async def refresh_token(  # noqa
     return JsonResponse(
         data=access_token,
         message="Success refresh access token",
+        status_code=status.HTTP_200_OK,
+    )
+
+
+@router.post(
+    "/forgot-password",
+    response_model=JsonResponse[str, None],
+)
+@limiter.limit(critical_limit)
+async def forgot_password(
+    request: Request,
+    response: Response,
+    email: Annotated[str, Form(...)],
+    connection: Annotated[AsyncConnection, Depends(get_async_conn)],
+) -> JsonResponse[str, None]:
+    """Handle forgot password request and send reset instructions."""
+    auth_service: AuthService = request.state.auth_service
+    await auth_service.forgot_password(email=email, connection=connection)
+
+    return JsonResponse(
+        data="Password reset instructions sent to your email.",
+        success=True,
+        message="Password reset instructions sent to your email.",
+        status_code=status.HTTP_200_OK,
+    )
+
+
+@router.get("/reset-password", response_class=HTMLResponse)
+async def get_reset_password_form(
+    request: Request,
+    token: str,
+) -> HTMLResponse:
+    """Render the reset password page."""
+    url_process_reset_password = (
+        f"http://{settings.URL_BACKEND_HOST}:{settings.URL_BACKEND_PORT}/api/v1/auth/reset-password"
+    )
+    return templates.TemplateResponse(
+        "reset_password_page.html",
+        {
+            "request": request,
+            "token": token,
+            "api_reset_password": url_process_reset_password,
+            "url_login_page": settings.URL_LOGIN_REDIRECT,
+        },
+    )
+
+
+@router.post("/reset-password", response_model=JsonResponse[str, None])
+async def reset_password(
+    request: Request,
+    payload: Annotated[ResetPasswordPayload, Form()],
+    connection: Annotated[AsyncConnection, Depends(get_async_transaction_conn)],
+) -> JsonResponse[str, None]:
+    """Reset user password using the provided token and new password."""
+    auth_service: AuthService = request.state.auth_service
+    await auth_service.reset_password(
+        payload=payload,
+        connection=connection,
+    )
+    return JsonResponse(
+        data="Password has been successfully reset.",
+        message="Password reset successful",
+        success=True,
         status_code=status.HTTP_200_OK,
     )
