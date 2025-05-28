@@ -73,6 +73,9 @@ The system consists of three main components:
 - `POST /api/v1/auth/verify-mfa`: Verify multi-factor authentication codes.
 - `POST /api/v1/auth/refresh`: Refresh an expired JWT using a refresh token.
 - `POST /api/v1/auth/verify-token`: Verify a JWT and check its validity.
+- `POST /api/v1/auth/forgot-password`: Initiate the password reset process.
+- `POST /api/v1/auth/reset-password`: Reset a user’s password using a reset token.
+- `GET /api/v1/auth/reset-password` : Provide a page for resetting the password (e.g., a link to the frontend).
 
 ### User Management (Admin) 👤
 - `GET /api/v1/admin/users`: Retrieve a list of all users (admin only).
@@ -137,11 +140,11 @@ To get user details, the access token is sent to using `POST /api/v1/auth/verify
     "username": "string",
     "email": "user@example.com",
     "firstname": "string",
-    "midname": "string",
-    "lastname": "string",
-    "phone": "string",
-    "telegram": "string",
-    "role": "string",
+    "midname": "string", // Optional
+    "lastname": "string", // Optional
+    "phone": "string", // Optional
+    "telegram": "string", // Optional
+    "role": "string", 
     "is_active": true,
     "mfa_enabled": true,
     "service_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
@@ -165,7 +168,8 @@ The current JWT payload includes more data, such as `email`, `phone`, and a `ser
 - [X] **Improve Verification Access to from Auth Service to API Services**: Implement a more secure method for API Services to verify JWTs.
 - [X] **Simplify JWT Payload**: Remove sensitive data (e.g., `email`, `phone`) and the `services` array from the JWT to reduce its size and minimize data exposure risks.
 - [X] **Maybe, Centralize Validate Token**: Store service access and roles in a database (cached in Redis) and create an endpoint (e.g., `GET /api/v1/auth/verify-token`) for services to dynamically check user access and roles.
-- [ ] **Implement Logging and Monitoring**: Add logging for all authentication and authorization events to enable auditing and monitoring of access attempts.
+- [X] **Implement Logging and Monitoring**: Add logging for all authentication and authorization events to enable auditing and monitoring of access attempts.
+- [X] **Add Forgot Password and Reset Password**: Implement endpoints for initiating and completing the password reset process.
 - [ ] **Build a Frontend**: Create a simple frontend application to demonstrate the Auth Service's functionality and provide a user-friendly interface for authentication and user management.
 - [ ] **Add Tests**: Implement unit and integration tests to ensure the reliability and correctness of the Auth Service.
 - [ ] **Improve Documentation**: Enhance the README and API documentation to provide clearer instructions and examples for developers using the Auth Service.
