@@ -5,7 +5,6 @@ from typing import Annotated
 from fastapi import APIRouter, Cookie, Depends, Form, Request, Response, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils.compat import UUID
 
@@ -251,7 +250,6 @@ async def refresh_token(  # noqa
 @limiter.limit(critical_limit)
 async def forgot_password(
     request: Request,
-    response: Response,
     email: Annotated[str, Form(...)],
     connection: Annotated[AsyncConnection, Depends(get_async_conn)],
 ) -> JsonResponse[str, None]:
