@@ -1,12 +1,8 @@
-import datetime as dt
 import time
-
-from datetime import datetime
 
 import structlog
 
 from fastapi import HTTPException, status
-from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils import UUID
 
@@ -29,7 +25,6 @@ from app.helpers.generator_jwt import (
     generate_jwt_tokens,
     generate_temporary_mfa_token,
 )
-from app.helpers.password_validator import PasswordValidate
 from app.helpers.user_validator import verify_mfa_credentials, verify_user_password, verify_user_status
 from app.integrations.mail import MailSender
 from app.integrations.mfa import TwoFactorAuth

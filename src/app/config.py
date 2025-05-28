@@ -2,7 +2,7 @@ import os
 
 from typing import Final
 
-from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
+from fastapi_mail import ConnectionConfig
 from pydantic import EmailStr, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

@@ -5,8 +5,6 @@ from datetime import datetime, timedelta
 
 import structlog
 
-from pydantic import EmailStr
-
 from app.config import KEY_REFRESH_TOKEN, settings
 from app.helpers.auth import create_access_token, create_refresh_token
 from app.integrations.redis import RedisHelper
