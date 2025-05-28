@@ -95,6 +95,20 @@ def generate_temporary_mfa_token(
     return mfa_temporary_token
 
 
+def generate_jwt_forgot_password_token(
+    user_data: dict,
+    expire_minutes: int = settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES,
+) -> str:
+    expire_time = time.time() + (60 * expire_minutes)
+    jwt_data_temporary = {
+        "sub": user_data.get("uuid", ""),
+        "exp": expire_time,
+    }
+    forgot_password_token = create_access_token(data=jwt_data_temporary)
+
+    return forgot_password_token
+
+
 def generate_jwt_tokens(
     user_data: dict,
     expire_minutes_access: int = settings.AUTH_TOKEN_ACCESS_EXPIRE_MINUTES,

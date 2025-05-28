@@ -38,7 +38,7 @@ def create_refresh_token(data: dict) -> str:
     return jwt.encode(
         claims=data,
         key=settings.AUTH_SECRET_REFRESH,
-        algorithm=settings.AUTH_ALGORTIHM_REFRESH,
+        algorithm=settings.AUTH_ALGORITHM_REFRESH,
     )
 
 
@@ -46,7 +46,7 @@ def create_refresh_token(data: dict) -> str:
 def decode_jwt(token: str, type_jwt: Literal["access", "refresh"] = "access") -> dict | None:
     try:
         key_secret = settings.AUTH_SECRET_ACCESS if type_jwt == "access" else settings.AUTH_SECRET_REFRESH
-        algorithm = settings.AUTH_ALGORITHM_ACCESS if type_jwt == "access" else settings.AUTH_ALGORTIHM_REFRESH
+        algorithm = settings.AUTH_ALGORITHM_ACCESS if type_jwt == "access" else settings.AUTH_ALGORITHM_REFRESH
         return jwt.decode(
             token=token,
             key=key_secret,

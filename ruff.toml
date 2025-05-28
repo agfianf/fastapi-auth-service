@@ -30,7 +30,7 @@ order-by-type = true
 exclude = [
   "src/migrations/*",
 ]
-extend-select = ["E", "F", "I", "UP", "B", "W", "C90", "N", "D", "PYI", "PT", "RET", "SIM", "ARG", "ERA"]
+extend-select = ["E", "F", "I", "UP", "B", "W", "C90", "N", "D", "PYI", "PT", "RET", "SIM", "ARG", "ERA",]
 ignore = [
   "ANN001",
   "B008",

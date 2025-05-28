@@ -16,11 +16,11 @@ class AuthStatements:
         return insert(users_table).values(**payload.transform()).returning(*users_table.c)
 
     @staticmethod
-    def get_user_by_username(username: str) -> select:
-        # Join with roles, service_memberships, services, and roles for service memberships
+    def _build_user_query_base() -> select:
+        """Build the base user query with all joins."""
         service_roles = business_roles_table.alias("service_roles")
 
-        stmt = (
+        return (
             select(
                 users_table.c.uuid,
                 users_table.c.username,
@@ -37,39 +37,53 @@ class AuthStatements:
                 users_table.c.created_at,
                 users_table.c.updated_at,
                 users_table.c.deleted_at,
-                roles_table.c.name.label("role"),  # Main role name from users.role_id
+                roles_table.c.name.label("role"),
                 services_table.c.uuid.label("service_uuid"),
                 services_table.c.name.label("service_name"),
                 services_table.c.description.label("service_description"),
                 services_table.c.is_active.label("service_is_active"),
                 service_memberships_table.c.is_active.label("member_is_active"),
-                service_roles.c.name.label("service_role_name"),  # Role name from service_memberships
+                service_roles.c.name.label("service_role_name"),
             )
             .select_from(users_table)
-            .outerjoin(roles_table, users_table.c.role_id == roles_table.c.id)  # Main role
-            .outerjoin(
-                service_memberships_table,
-                users_table.c.uuid == service_memberships_table.c.user_uuid,
-            )  # Join to service memberships
-            .outerjoin(
-                services_table,
-                service_memberships_table.c.service_uuid == services_table.c.uuid,
-            )  # Join to services
-            .outerjoin(
-                service_roles,
-                service_memberships_table.c.business_role_id == service_roles.c.id,
-            )  # Join to roles for service memberships
-            .where(
-                and_(
-                    users_table.c.username == username,
-                    users_table.c.deleted_at.is_(None),
-                    service_memberships_table.c.deleted_at.is_(None),
-                    services_table.c.deleted_at.is_(None),
-                )
+            .outerjoin(roles_table, users_table.c.role_id == roles_table.c.id)
+            .outerjoin(service_memberships_table, users_table.c.uuid == service_memberships_table.c.user_uuid)
+            .outerjoin(services_table, service_memberships_table.c.service_uuid == services_table.c.uuid)
+            .outerjoin(service_roles, service_memberships_table.c.business_role_id == service_roles.c.id)
+        )
+
+    @staticmethod
+    def get_user_by_username(username: str) -> select:
+        return AuthStatements._build_user_query_base().where(
+            and_(
+                users_table.c.username == username,
+                users_table.c.deleted_at.is_(None),
+                service_memberships_table.c.deleted_at.is_(None),
+                services_table.c.deleted_at.is_(None),
             )
         )
 
-        return stmt
+    @staticmethod
+    def get_user_by_email(email: str) -> select:
+        return AuthStatements._build_user_query_base().where(
+            and_(
+                users_table.c.email == email,
+                users_table.c.deleted_at.is_(None),
+                service_memberships_table.c.deleted_at.is_(None),
+                services_table.c.deleted_at.is_(None),
+            )
+        )
+
+    @staticmethod
+    def get_user_by_uuid(user_uuid: str) -> select:
+        return AuthStatements._build_user_query_base().where(
+            and_(
+                users_table.c.uuid == user_uuid,
+                users_table.c.deleted_at.is_(None),
+                service_memberships_table.c.deleted_at.is_(None),
+                services_table.c.deleted_at.is_(None),
+            )
+        )
 
 
 class AuthAsyncRepositories:
@@ -85,15 +99,8 @@ class AuthAsyncRepositories:
         return CreateUserQueryResponse.model_validate(dict(new_user))
 
     @staticmethod
-    @query_exceptions_handler
-    async def get_user_by_username(
-        connection: AsyncConnection,
-        username: str,
-    ) -> UserMembershipQueryReponse | None:
-        stmt = AuthStatements.get_user_by_username(username=username)
-        result = await connection.execute(stmt)
-        rows = result.mappings().all()
-
+    def _process_user_query_result(rows) -> UserMembershipQueryReponse | None:
+        """Process user query result rows into UserMembershipQueryReponse."""
         if not rows:
             return None
 
@@ -118,3 +125,36 @@ class AuthAsyncRepositories:
         }
 
         return UserMembershipQueryReponse.model_validate(user_response)
+
+    @staticmethod
+    @query_exceptions_handler
+    async def get_user_by_username(
+        connection: AsyncConnection,
+        username: str,
+    ) -> UserMembershipQueryReponse | None:
+        stmt = AuthStatements.get_user_by_username(username=username)
+        result = await connection.execute(stmt)
+        rows = result.mappings().all()
+        return AuthAsyncRepositories._process_user_query_result(rows)
+
+    @staticmethod
+    @query_exceptions_handler
+    async def get_user_by_email(
+        connection: AsyncConnection,
+        email: str,
+    ) -> UserMembershipQueryReponse | None:
+        stmt = AuthStatements.get_user_by_email(email=email)
+        result = await connection.execute(stmt)
+        rows = result.mappings().all()
+        return AuthAsyncRepositories._process_user_query_result(rows)
+
+    @staticmethod
+    @query_exceptions_handler
+    async def get_user_by_uuid(
+        connection: AsyncConnection,
+        user_uuid: str,
+    ) -> UserMembershipQueryReponse | None:
+        stmt = AuthStatements.get_user_by_uuid(user_uuid=user_uuid)
+        result = await connection.execute(stmt)
+        rows = result.mappings().all()
+        return AuthAsyncRepositories._process_user_query_result(rows)
