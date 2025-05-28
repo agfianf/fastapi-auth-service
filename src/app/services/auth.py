@@ -422,7 +422,7 @@ class AuthService:
         logger.debug("Processing reset password request", payload=payload.model_dump(mode="json"))
         data = decode_access_jwt(token=payload.reset_token)
         if data is None:
-            logger.warning("Invalid reset token", reset_token=payload.reset_token)
+            logger.warning("Invalid reset token")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid or expired session for reset password",
@@ -431,19 +431,19 @@ class AuthService:
         key_cache_reset = f"password_reset:{payload.reset_token}"
         email_user = self.redis.get_data(key_cache_reset)
         if email_user is None:
-            logger.warning("Reset token not found in Redis", reset_token=payload.reset_token)
+            logger.warning("Reset token not found in Redis")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User already reset password or invalid token",
             )
-        logger.debug("value from redis", reset_token=payload.reset_token, email_user=email_user)
+        logger.debug("value from redis", email_user=email_user)
 
         key_cache_reset_used = f"password_reset_used:{email_user}"
         is_used = self.redis.get_data(key_cache_reset_used)
 
-        logger.debug("value token used status ", reset_token=payload.reset_token, is_used=is_used)
+        logger.debug("value token used status ", is_used=is_used)
         if is_used:
-            logger.warning("Reset token has been revoked", reset_token=payload.reset_token)
+            logger.warning("Reset token has been revoked")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Reset token has been revoked or expired",
